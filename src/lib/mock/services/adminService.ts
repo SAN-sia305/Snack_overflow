@@ -1,5 +1,4 @@
 import {
-  AdminAlert,
   ProductRequestStatus,
   Snack,
   SnackCategory,
@@ -8,6 +7,7 @@ import {
 import { mockStore, getStockStatus } from "../store";
 import { simulateLatency } from "../latency";
 import { snackService } from "./snackService";
+import { SEED_USERS } from "../data/users";
 
 export interface AdminSummaryData {
   totalSnacks: number;
@@ -38,7 +38,23 @@ export const adminService = {
     await simulateLatency(120, 250);
     const { productRequests } = mockStore.get();
 
-    let list = [...productRequests];
+    let list = productRequests.map((request) => {
+      const verifiedRequesterIds = new Set(
+        request.requests
+          .filter((memberRequest) => {
+            const user = SEED_USERS.find(
+              (candidate) => candidate.id === memberRequest.userId
+            );
+            return user ? user.isVerified : true;
+          })
+          .map((memberRequest) => memberRequest.userId)
+      );
+      return {
+        ...request,
+        requests: [...request.requests],
+        distinctRequesterCount: verifiedRequesterIds.size,
+      };
+    });
 
     if (statusFilter && statusFilter !== "all") {
       list = list.filter((r) => r.status === statusFilter);
@@ -82,8 +98,7 @@ export const adminService = {
     const isAllowed =
       (currentStatus === "requested" &&
         (newStatus === "approved" || newStatus === "rejected")) ||
-      (currentStatus === "approved" && newStatus === "purchased") ||
-      (currentStatus === "purchased" && newStatus === "available");
+      (currentStatus === "approved" && newStatus === "purchased");
 
     if (!isAllowed) {
       throw new Error(
@@ -129,6 +144,23 @@ export const adminService = {
       throw new Error(
         `Product must be in "purchased" status before adding to inventory. Current status: ${group.status}`
       );
+    }
+
+    if (group.linkedSnackId) {
+      throw new Error("This product request is already linked to pantry inventory.");
+    }
+
+    if (!snackData.name.trim()) {
+      throw new Error("Snack name is required.");
+    }
+    if (!Number.isInteger(snackData.quantity) || snackData.quantity <= 0) {
+      throw new Error("Arrival quantity must be a positive whole number.");
+    }
+    if (
+      !Number.isInteger(snackData.lowStockThreshold) ||
+      snackData.lowStockThreshold < 0
+    ) {
+      throw new Error("Low-stock threshold must be a non-negative whole number.");
     }
 
     // 1. Create the new Snack in pantry inventory
@@ -227,4 +259,3 @@ export const adminService = {
     };
   },
 };
-
