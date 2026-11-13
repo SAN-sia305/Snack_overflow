@@ -6,7 +6,7 @@ import { voteService } from "@/lib/mock/services/voteService";
 import { snackRequestService, SubmitSnackRequestInput } from "@/lib/mock/services/snackRequestService";
 import { adminService, AddPurchasedToInventoryInput } from "@/lib/mock/services/adminService";
 import { activityService, GetActivitiesParams } from "@/lib/mock/services/activityService";
-import { ProductRequestStatus } from "@/types";
+import { ProductRequestStatus, Snack } from "@/types";
 
 // ========================
 // Snack Queries & Mutations
@@ -52,6 +52,45 @@ export function useConsumeSnack() {
       snackId: string;
       user: { id: string; name: string; role: "admin" | "member" };
     }) => snackService.consumeSnack(snackId, user),
+    onMutate: async ({ snackId }) => {
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: ["snacks"] }),
+        queryClient.cancelQueries({ queryKey: ["snack", snackId] }),
+        queryClient.cancelQueries({ queryKey: ["snackOfTheWeek"] }),
+        queryClient.cancelQueries({ queryKey: ["newArrivals"] }),
+      ]);
+
+      const snackLists = queryClient.getQueriesData<Snack[]>({
+        queryKey: ["snacks"],
+      });
+      const snack = queryClient.getQueryData<Snack | null>(["snack", snackId]);
+      const snackOfTheWeek =
+        queryClient.getQueryData<Snack | null>(["snackOfTheWeek"]);
+      const newArrivals = queryClient.getQueryData<Snack[]>(["newArrivals"]);
+      const optimisticUpdate = (item: Snack) =>
+        item.id === snackId
+          ? {
+              ...item,
+              quantity: Math.max(0, item.quantity - 1),
+              updatedAt: new Date().toISOString(),
+            }
+          : item;
+
+      queryClient.setQueriesData<Snack[]>({ queryKey: ["snacks"] }, (current) =>
+        current?.map(optimisticUpdate)
+      );
+      queryClient.setQueryData<Snack | null>(["snack", snackId], (current) =>
+        current ? optimisticUpdate(current) : current
+      );
+      queryClient.setQueryData<Snack | null>(["snackOfTheWeek"], (current) =>
+        current ? optimisticUpdate(current) : current
+      );
+      queryClient.setQueryData<Snack[]>(["newArrivals"], (current) =>
+        current?.map(optimisticUpdate)
+      );
+
+      return { snackLists, snack, snackOfTheWeek, newArrivals };
+    },
     onSuccess: (updatedSnack) => {
       queryClient.invalidateQueries({ queryKey: ["snacks"] });
       queryClient.invalidateQueries({ queryKey: ["snack", updatedSnack.id] });
@@ -60,6 +99,16 @@ export function useConsumeSnack() {
       queryClient.invalidateQueries({ queryKey: ["admin", "summary"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "alerts"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "activities"] });
+    },
+    onError: (_error, variables, context) => {
+      context?.snackLists.forEach(([queryKey, data]) => {
+        queryClient.setQueryData(queryKey, data);
+      });
+      queryClient.setQueryData(["snack", variables.snackId], context?.snack);
+      queryClient.setQueryData(["snackOfTheWeek"], context?.snackOfTheWeek);
+      queryClient.setQueryData(["newArrivals"], context?.newArrivals);
+      queryClient.invalidateQueries({ queryKey: ["snacks"] });
+      queryClient.invalidateQueries({ queryKey: ["snack", variables.snackId] });
     },
   });
 }
@@ -156,11 +205,83 @@ export function useToggleVote() {
   return useMutation({
     mutationFn: ({ snackId, userId }: { snackId: string; userId: string }) =>
       voteService.toggleVote(snackId, userId),
+    onMutate: async ({ snackId, userId }) => {
+      const userVotesKey = ["userVotes", userId];
+      await Promise.all([
+        queryClient.cancelQueries({ queryKey: ["snacks"] }),
+        queryClient.cancelQueries({ queryKey: ["snack", snackId] }),
+        queryClient.cancelQueries({ queryKey: ["snackOfTheWeek"] }),
+        queryClient.cancelQueries({ queryKey: ["newArrivals"] }),
+        queryClient.cancelQueries({ queryKey: userVotesKey }),
+      ]);
+
+      const snackLists = queryClient.getQueriesData<Snack[]>({
+        queryKey: ["snacks"],
+      });
+      const snack = queryClient.getQueryData<Snack | null>(["snack", snackId]);
+      const snackOfTheWeek =
+        queryClient.getQueryData<Snack | null>(["snackOfTheWeek"]);
+      const newArrivals = queryClient.getQueryData<Snack[]>(["newArrivals"]);
+      const userVotes = queryClient.getQueryData<string[]>(userVotesKey);
+      const hadVoted = userVotes?.includes(snackId) ?? false;
+      const updateSnackVote = (item: Snack) =>
+        item.id === snackId
+          ? { ...item, voteCount: Math.max(0, item.voteCount + (hadVoted ? -1 : 1)) }
+          : item;
+
+      queryClient.setQueriesData<Snack[]>({ queryKey: ["snacks"] }, (current) =>
+        current?.map(updateSnackVote)
+      );
+      queryClient.setQueryData<Snack | null>(["snack", snackId], (current) =>
+        current ? updateSnackVote(current) : current
+      );
+      queryClient.setQueryData<Snack | null>(["snackOfTheWeek"], (current) =>
+        current ? updateSnackVote(current) : current
+      );
+      queryClient.setQueryData<Snack[]>(["newArrivals"], (current) =>
+        current?.map(updateSnackVote)
+      );
+      queryClient.setQueryData<string[]>(userVotesKey, (current = []) =>
+        hadVoted
+          ? current.filter((id) => id !== snackId)
+          : [...current, snackId]
+      );
+
+      return {
+        snackLists,
+        snack,
+        snackOfTheWeek,
+        newArrivals,
+        userVotes,
+      };
+    },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["userVotes", variables.userId] });
       queryClient.invalidateQueries({ queryKey: ["snacks"] });
       queryClient.invalidateQueries({ queryKey: ["snack", variables.snackId] });
       queryClient.invalidateQueries({ queryKey: ["snackOfTheWeek"] });
+      queryClient.invalidateQueries({ queryKey: ["newArrivals"] });
+    },
+    onError: (_error, variables, context) => {
+      context?.snackLists.forEach(([queryKey, data]) => {
+        queryClient.setQueryData(queryKey, data);
+      });
+      queryClient.setQueryData(["snack", variables.snackId], context?.snack);
+      queryClient.setQueryData(["snackOfTheWeek"], context?.snackOfTheWeek);
+      queryClient.setQueryData(["newArrivals"], context?.newArrivals);
+      if (context?.userVotes) {
+        queryClient.setQueryData(
+          ["userVotes", variables.userId],
+          context.userVotes
+        );
+      } else {
+        queryClient.removeQueries({
+          queryKey: ["userVotes", variables.userId],
+          exact: true,
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ["snacks"] });
+      queryClient.invalidateQueries({ queryKey: ["snack", variables.snackId] });
     },
   });
 }
@@ -273,4 +394,3 @@ export function useAdminActivities(params: GetActivitiesParams = {}) {
     queryFn: () => activityService.getActivities(params),
   });
 }
-

@@ -2,11 +2,11 @@
 
 import Image from "next/image";
 import { Snack } from "@/types";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getStockStatus } from "@/lib/mock/store";
-import { ThumbsUp, Sparkle, WarningCircle, CheckCircle, Package } from "@phosphor-icons/react";
+import { ThumbsUp, Sparkle, WarningCircle, PlusCircle } from "@phosphor-icons/react";
 
 export function SnackDetailModal({
   snack,
@@ -14,6 +14,7 @@ export function SnackDetailModal({
   onOpenChange,
   onConsume,
   onVote,
+  onRequestSnack,
   isVoted = false,
   isConsuming = false,
   isVoting = false,
@@ -23,6 +24,7 @@ export function SnackDetailModal({
   onOpenChange: (open: boolean) => void;
   onConsume?: (snack: Snack) => void;
   onVote?: (snack: Snack) => void;
+  onRequestSnack?: () => void;
   isVoted?: boolean;
   isConsuming?: boolean;
   isVoting?: boolean;
@@ -79,10 +81,6 @@ export function SnackDetailModal({
                   ? `Running Low (${snack.quantity} packets left)`
                   : `${snack.quantity} packets available`}
               </Badge>
-
-              <span className="text-xs text-neutral-400 font-medium">
-                Threshold: {snack.lowStockThreshold}
-              </span>
             </div>
 
             <h2 className="text-xl sm:text-2xl font-bold text-neutral-900 dark:text-neutral-50 tracking-tight">
@@ -128,9 +126,21 @@ export function SnackDetailModal({
               {isGone ? "Gone" : "Consume 1 Packet"}
             </Button>
           </div>
+
+          {/* Request CTA */}
+          {onRequestSnack && (
+            <div className="pt-1 text-center">
+              <button
+                onClick={onRequestSnack}
+                className="inline-flex items-center gap-1.5 text-xs text-neutral-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors font-medium"
+              >
+                <PlusCircle className="w-3.5 h-3.5" weight="bold" />
+                Can&apos;t find what you want? Request a snack
+              </button>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>
   );
 }
-
