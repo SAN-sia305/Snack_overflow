@@ -18,6 +18,9 @@ export interface MyRequestItem {
   createdAt: string;
   status: ProductRequestStatus;
   decisionNote?: string;
+  reviewedAt?: string;
+  purchasedAt?: string;
+  availableAt?: string;
   linkedSnackId?: string;
 }
 
@@ -44,6 +47,9 @@ export const snackRequestService = {
           createdAt: userReq.createdAt,
           status: group.status,
           decisionNote: group.decisionNote,
+          reviewedAt: group.reviewedAt,
+          purchasedAt: group.purchasedAt,
+          availableAt: group.availableAt,
           linkedSnackId: group.linkedSnackId,
         });
       }
@@ -70,7 +76,10 @@ export const snackRequestService = {
       throw new Error("Snack name is required.");
     }
 
-    if (!input.expectedPriceInr || input.expectedPriceInr <= 0) {
+    if (
+      !Number.isFinite(input.expectedPriceInr) ||
+      input.expectedPriceInr <= 0
+    ) {
       throw new Error("Expected price must be a positive amount in INR.");
     }
 
@@ -152,7 +161,10 @@ export const snackRequestService = {
       createdAt: memberReq.createdAt,
       status: group.status,
       decisionNote: group.decisionNote,
+      reviewedAt: group.reviewedAt,
+      purchasedAt: group.purchasedAt,
+      availableAt: group.availableAt,
+      linkedSnackId: group.linkedSnackId,
     };
   },
 };
-

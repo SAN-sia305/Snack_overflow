@@ -70,8 +70,11 @@ export function RequestSnackModal({
       reset();
       onOpenChange(false);
       onSuccess?.();
-    } catch (err: any) {
-      toast.error("Request Failed", err.message || "Failed to submit request.");
+    } catch (error: unknown) {
+      toast.error(
+        "Request Failed",
+        error instanceof Error ? error.message : "Failed to submit request."
+      );
     }
   };
 
@@ -166,4 +169,3 @@ export function RequestSnackModal({
     </Dialog>
   );
 }
-
