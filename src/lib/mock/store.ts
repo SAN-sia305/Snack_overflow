@@ -2,7 +2,6 @@ import { Snack, SnackProductRequest, Activity, SnackStatus } from "@/types";
 import { SEED_SNACKS } from "./data/snacks";
 import { SEED_REQUESTS } from "./data/requests";
 import { SEED_ACTIVITIES } from "./data/activities";
-import { SEED_USERS } from "./data/users";
 
 const STORAGE_KEY = "snackoverflow_mock_store_v1";
 

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuthStore } from "@/store/useAuthStore";
 import {
@@ -32,9 +32,6 @@ import {
   Plus,
   ArrowRight,
   Cookie,
-  CheckCircle,
-  Clock,
-  Heart,
 } from "@phosphor-icons/react";
 
 function getTimeGreeting(): string {
@@ -85,14 +82,17 @@ export default function MemberHomePage() {
         "Enjoy your snack!",
         `Consumed 1 packet of ${snack.name}. Pantry stock updated.`
       );
-    } catch (err: any) {
-      if (err.code === "STOCK_CONFLICT") {
+    } catch (err: unknown) {
+      if (err instanceof Error && "code" in err && err.code === "STOCK_CONFLICT") {
         toast.conflict(
           "Stock Conflict",
           "Someone beat you to the last packet. Better luck next time."
         );
       } else {
-        toast.error("Consume Error", err.message || "Could not consume snack.");
+        toast.error(
+          "Consume Error",
+          err instanceof Error ? err.message : "Could not consume snack."
+        );
       }
     }
   };
@@ -108,8 +108,11 @@ export default function MemberHomePage() {
       } else {
         toast.info("Vote Removed", `Removed vote for ${snack.name}. Total: ${res.newCount}`);
       }
-    } catch (err: any) {
-      toast.error("Vote Error", err.message || "Failed to record vote.");
+    } catch (err: unknown) {
+      toast.error(
+        "Vote Error",
+        err instanceof Error ? err.message : "Failed to record vote."
+      );
     }
   };
 
@@ -186,7 +189,9 @@ export default function MemberHomePage() {
         </section>
 
         {/* 3. New Arrivals Carousel / Grid Preview */}
-        {newArrivals.length > 0 && (
+        {loadingArrivals ? (
+          <Skeleton className="h-56 rounded-2xl" />
+        ) : newArrivals.length > 0 ? (
           <section className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
@@ -227,7 +232,7 @@ export default function MemberHomePage() {
               ))}
             </div>
           </section>
-        )}
+        ) : null}
 
         {/* 4. Explore the Pantry Teaser Section */}
         <section className="space-y-5">

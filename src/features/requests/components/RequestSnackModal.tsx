@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -10,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useSubmitSnackRequest } from "@/lib/api/hooks";
 import { toast } from "@/store/useToastStore";
-import { Tray, CurrencyInr, ChatText, Sparkle } from "@phosphor-icons/react";
+import { Tray, CurrencyInr } from "@phosphor-icons/react";
 
 const requestSchema = z.object({
   productName: z

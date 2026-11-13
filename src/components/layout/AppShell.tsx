@@ -10,7 +10,6 @@ import { ToastContainer } from "@/components/ui/toast";
 import { toast } from "@/store/useToastStore";
 
 const ADMIN_ROUTES = ["/dashboard", "/inventory", "/requests", "/activity"];
-const MEMBER_ROUTES = ["/home", "/explore", "/new-arrivals", "/my-requests"];
 
 export function AppShell({
   children,
@@ -71,4 +70,3 @@ export function AppShell({
     </div>
   );
 }
-

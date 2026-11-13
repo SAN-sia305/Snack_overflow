@@ -32,11 +32,14 @@ export default function NewArrivalsPage() {
         user: { id: currentUser.id, name: currentUser.name, role: currentUser.role },
       });
       toast.success("Enjoy your snack!", `Consumed 1 packet of ${snack.name}.`);
-    } catch (err: any) {
-      if (err.code === "STOCK_CONFLICT") {
+    } catch (err: unknown) {
+      if (err instanceof Error && "code" in err && err.code === "STOCK_CONFLICT") {
         toast.conflict("Stock Conflict", "Someone beat you to the last packet. Better luck next time.");
       } else {
-        toast.error("Consume Error", err.message || "Could not consume snack.");
+        toast.error(
+          "Consume Error",
+          err instanceof Error ? err.message : "Could not consume snack."
+        );
       }
     }
   };
@@ -49,8 +52,11 @@ export default function NewArrivalsPage() {
       } else {
         toast.info("Vote Removed", `Removed vote for ${snack.name}. Total: ${res.newCount}`);
       }
-    } catch (err: any) {
-      toast.error("Vote Error", err.message || "Failed to toggle vote.");
+    } catch (err: unknown) {
+      toast.error(
+        "Vote Error",
+        err instanceof Error ? err.message : "Failed to toggle vote."
+      );
     }
   };
 

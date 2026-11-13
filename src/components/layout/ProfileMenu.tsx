@@ -11,7 +11,6 @@ import {
   Sun,
   Moon,
   CaretDown,
-  User as UserIcon,
 } from "@phosphor-icons/react";
 import { useThemeStore } from "@/store/useThemeStore";
 import { toast } from "@/store/useToastStore";
@@ -147,4 +146,3 @@ export function ProfileMenu() {
     </div>
   );
 }
-

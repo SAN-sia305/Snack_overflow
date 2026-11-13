@@ -145,11 +145,10 @@ export const snackService = {
     }
 
     if (snack.quantity <= 0) {
-      const error: any = new Error(
-        "Someone beat you to the last packet. Better luck next time."
+      const error = Object.assign(
+        new Error("Someone beat you to the last packet. Better luck next time."),
+        { code: "STOCK_CONFLICT", status: 409 }
       );
-      error.code = "STOCK_CONFLICT";
-      error.status = 409;
       throw error;
     }
 

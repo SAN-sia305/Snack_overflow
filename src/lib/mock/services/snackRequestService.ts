@@ -1,4 +1,4 @@
-import { MemberSnackRequest, ProductRequestStatus, SnackProductRequest, User } from "@/types";
+import { MemberSnackRequest, ProductRequestStatus, SnackProductRequest } from "@/types";
 import { mockStore, normalizeProductKey } from "../store";
 import { simulateLatency } from "../latency";
 import { SEED_USERS } from "../data/users";
