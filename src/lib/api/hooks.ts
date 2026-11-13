@@ -131,6 +131,7 @@ export function useRestockSnack() {
     onSuccess: (updatedSnack) => {
       queryClient.invalidateQueries({ queryKey: ["snacks"] });
       queryClient.invalidateQueries({ queryKey: ["snack", updatedSnack.id] });
+      queryClient.invalidateQueries({ queryKey: ["newArrivals"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "summary"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "alerts"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "activities"] });
@@ -143,12 +144,15 @@ export function useCreateSnack() {
 
   return useMutation({
     mutationFn: (input: CreateSnackInput) => snackService.createSnack(input),
-    onSuccess: () => {
+    onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ["snacks"] });
+      queryClient.invalidateQueries({ queryKey: ["snack", id] });
       queryClient.invalidateQueries({ queryKey: ["newArrivals"] });
+      queryClient.invalidateQueries({ queryKey: ["snackOfTheWeek"] });
+      queryClient.invalidateQueries({ queryKey: ["userVotes"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "activities"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "summary"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "alerts"] });
-      queryClient.invalidateQueries({ queryKey: ["admin", "activities"] });
     },
   });
 }
@@ -167,6 +171,7 @@ export function useUpdateSnack() {
     onSuccess: (updatedSnack) => {
       queryClient.invalidateQueries({ queryKey: ["snacks"] });
       queryClient.invalidateQueries({ queryKey: ["snack", updatedSnack.id] });
+      queryClient.invalidateQueries({ queryKey: ["newArrivals"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "summary"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "alerts"] });
     },
@@ -181,6 +186,8 @@ export function useDeleteSnack() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["snacks"] });
       queryClient.invalidateQueries({ queryKey: ["newArrivals"] });
+      queryClient.invalidateQueries({ queryKey: ["snackOfTheWeek"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "activities"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "summary"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "alerts"] });
     },

@@ -19,6 +19,21 @@ export interface CreateSnackInput {
   priceInr?: number;
 }
 
+function validateNonNegativeInteger(value: number, label: string): void {
+  if (!Number.isInteger(value) || value < 0) {
+    throw new Error(`${label} must be a non-negative whole number.`);
+  }
+}
+
+function validatePrice(priceInr: number | undefined): void {
+  if (
+    priceInr !== undefined &&
+    (!Number.isFinite(priceInr) || priceInr <= 0)
+  ) {
+    throw new Error("Price must be a positive amount in INR.");
+  }
+}
+
 export const snackService = {
   async getSnacks(params: GetSnacksParams = {}): Promise<Snack[]> {
     await simulateLatency(120, 250);
@@ -199,25 +214,33 @@ export const snackService = {
 
   async createSnack(input: CreateSnackInput): Promise<Snack> {
     await simulateLatency(180, 320);
+    const name = input.name.trim();
+    if (!name) {
+      throw new Error("Snack name is required.");
+    }
+    validateNonNegativeInteger(input.quantity, "Quantity");
+    validateNonNegativeInteger(input.lowStockThreshold, "Low-stock threshold");
+    validatePrice(input.priceInr);
+
     const { snacks } = mockStore.get();
 
     // Prevent duplicate snack names (case-insensitive)
-    const normalizedInputName = input.name.trim().toLowerCase();
+    const normalizedInputName = name.toLowerCase();
     const exists = snacks.some(
       (s) => s.name.trim().toLowerCase() === normalizedInputName
     );
 
     if (exists) {
-      throw new Error(`A snack named "${input.name.trim()}" already exists in the pantry.`);
+      throw new Error(`A snack named "${name}" already exists in the pantry.`);
     }
 
     const newSnack: Snack = {
       id: "snack_" + Math.random().toString(36).substring(2, 9),
-      name: input.name.trim(),
+      name,
       category: input.category,
       description: input.description.trim(),
       quantity: Math.max(0, Math.floor(input.quantity)),
-      lowStockThreshold: Math.max(0, Math.floor(input.lowStockThreshold || 5)),
+      lowStockThreshold: input.lowStockThreshold,
       imageUrl:
         input.imageUrl ||
         "https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=600&auto=format&fit=crop&q=80",
@@ -256,15 +279,31 @@ export const snackService = {
       throw new Error("Snack not found");
     }
 
-    if (updates.name) {
-      const normalizedNewName = updates.name.trim().toLowerCase();
+    if (updates.name !== undefined) {
+      const name = updates.name.trim();
+      if (!name) {
+        throw new Error("Snack name is required.");
+      }
+      const normalizedNewName = name.toLowerCase();
       const duplicate = snacks.some(
         (s) => s.id !== id && s.name.trim().toLowerCase() === normalizedNewName
       );
       if (duplicate) {
-        throw new Error(`Another snack named "${updates.name.trim()}" already exists.`);
+        throw new Error(`Another snack named "${name}" already exists.`);
       }
+      updates = { ...updates, name };
     }
+
+    if (updates.quantity !== undefined) {
+      validateNonNegativeInteger(updates.quantity, "Quantity");
+    }
+    if (updates.lowStockThreshold !== undefined) {
+      validateNonNegativeInteger(
+        updates.lowStockThreshold,
+        "Low-stock threshold"
+      );
+    }
+    validatePrice(updates.priceInr);
 
     const current = snacks[index];
     const updated: Snack = {
@@ -280,7 +319,9 @@ export const snackService = {
 
   async deleteSnack(id: string): Promise<void> {
     await simulateLatency(150, 250);
-    mockStore.updateSnacks((snacks) => snacks.filter((s) => s.id !== id));
+    if (!mockStore.get().snacks.some((snack) => snack.id === id)) {
+      throw new Error("Snack not found");
+    }
+    mockStore.deleteSnack(id);
   },
 };
-

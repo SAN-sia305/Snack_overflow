@@ -86,6 +86,14 @@ export const mockStore = {
     return store.snacks;
   },
 
+  deleteSnack: (snackId: string): void => {
+    store.snacks = store.snacks.filter((snack) => snack.id !== snackId);
+    for (const [userId, snackIds] of Object.entries(store.userVotes)) {
+      store.userVotes[userId] = snackIds.filter((id) => id !== snackId);
+    }
+    persistStore();
+  },
+
   updateRequests: (updater: (requests: SnackProductRequest[]) => SnackProductRequest[]) => {
     store.productRequests = updater(store.productRequests);
     persistStore();
@@ -142,4 +150,3 @@ export const mockStore = {
     return store;
   },
 };
-
