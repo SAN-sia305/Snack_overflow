@@ -2,6 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { snackService, GetSnacksParams, CreateSnackInput } from "@/lib/mock/services/snackService";
+import { fetchSnack, fetchSnacks } from "@/lib/api/snacks";
 import { voteService } from "@/lib/mock/services/voteService";
 import { snackRequestService, SubmitSnackRequestInput } from "@/lib/mock/services/snackRequestService";
 import { adminService, AddPurchasedToInventoryInput } from "@/lib/mock/services/adminService";
@@ -15,14 +16,14 @@ import { ProductRequestStatus, Snack } from "@/types";
 export function useSnacks(params: GetSnacksParams = {}) {
   return useQuery({
     queryKey: ["snacks", params],
-    queryFn: () => snackService.getSnacks(params),
+    queryFn: () => fetchSnacks(params),
   });
 }
 
 export function useSnack(id: string) {
   return useQuery({
     queryKey: ["snack", id],
-    queryFn: () => snackService.getSnackById(id),
+    queryFn: () => fetchSnack(id),
     enabled: !!id,
   });
 }

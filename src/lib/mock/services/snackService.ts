@@ -7,6 +7,8 @@ export interface GetSnacksParams {
   category?: SnackCategory | "all";
   status?: SnackStatus | "all";
   sortBy?: "name-asc" | "name-desc" | "votes-desc" | "quantity-asc" | "quantity-desc" | "newest";
+  page?: number;
+  limit?: number;
 }
 
 export interface CreateSnackInput {

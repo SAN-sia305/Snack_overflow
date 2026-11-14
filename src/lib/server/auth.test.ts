@@ -153,7 +153,10 @@ describe("server authentication", () => {
 
     expect(response.status).toBe(401);
     expect(await response.json()).toEqual({
-      error: "Invalid email or password.",
+      error: {
+        code: "INVALID_CREDENTIALS",
+        message: "Invalid email or password.",
+      },
     });
     expect(mocks.verifyPassword).toHaveBeenCalled();
     expect(mocks.createSession).not.toHaveBeenCalled();

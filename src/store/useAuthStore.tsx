@@ -10,6 +10,7 @@ import {
 import { createStore, StoreApi, useStore } from "zustand";
 import { z } from "zod";
 import { AuthUser } from "@/types";
+import { requestJson } from "@/lib/api/client";
 
 type AuthStatus = "loading" | "authenticated" | "unauthenticated" | "error";
 
@@ -78,24 +79,11 @@ function createAuthStore(initialUser: AuthUser | null) {
     },
 
     login: async (email, password) => {
-      const response = await fetch("/api/auth/login", {
+      const payload = await requestJson("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
         body: JSON.stringify({ email, password }),
       });
-
-      const payload: unknown = await response.json();
-      if (!response.ok) {
-        const message =
-          typeof payload === "object" &&
-          payload !== null &&
-          "error" in payload &&
-          typeof payload.error === "string"
-            ? payload.error
-            : "Unable to sign in.";
-        throw new Error(message);
-      }
 
       const { user } = authResponseSchema.parse(payload);
       set({

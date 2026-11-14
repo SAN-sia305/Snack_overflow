@@ -42,6 +42,12 @@ Sessions use random opaque tokens in HttpOnly cookies; only SHA-256 token hashes
 
 - Login failures are rate-limited per email and source address in process memory. This is suitable only for a single local development process; production deployments need a shared rate limiter and a trusted proxy that replaces forwarded-address headers.
 
+## Snack read API
+
+`GET /api/snacks` and `GET /api/snacks/:id` require an authenticated session. List responses have the shape `{ items, pagination: { page, limit, total, totalPages } }`; detail responses have the shape `{ snack }`. Snack DTOs contain the public pantry fields and a vote count, never ORM records.
+
+The list accepts `search` (name or description, up to 100 characters), `category` (`sweet`, `savoury`, `drink`, `healthy-ish`, or `all`), `status` (`stocked`, `running_low`, `gone`, or `all`), `sortBy` (`name-asc`, `name-desc`, `votes-desc`, `quantity-asc`, `quantity-desc`, or `newest`), `page` (default `1`), and `limit` (default `24`, maximum `100`). Invalid or unknown parameters return `400` with the standard `{ error: { code, message } }` envelope. Sorting uses stable ID tie-breakers. Stock status is derived as `gone` when quantity is zero, `running_low` when quantity is positive and at or below its threshold, otherwise `stocked`.
+
 ## Architecture
 
 - `src/app/` contains App Router pages and Route Handlers.
