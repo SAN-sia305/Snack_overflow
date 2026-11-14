@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { Button } from "@/components/ui/button";
@@ -21,62 +21,59 @@ import {
 
 export default function LoginPage() {
   const router = useRouter();
-  const { loginAs, loginWithEmail } = useAuthStore();
+  const {
+    currentUser,
+    login,
+    isAuthenticated,
+    status,
+    error,
+    refresh,
+  } = useAuthStore();
 
   const [selectedRole, setSelectedRole] = useState<"admin" | "member">("member");
   const [email, setEmail] = useState("member@bipolarfactory.com");
-  const [password, setPassword] = useState("demo123");
+  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace(currentUser?.role === "admin" ? "/dashboard" : "/home");
+    }
+  }, [currentUser?.role, isAuthenticated, router]);
 
   const handleSelectRole = (role: "admin" | "member") => {
     setSelectedRole(role);
     if (role === "admin") {
       setEmail("admin@bipolarfactory.com");
-      setPassword("demo123");
     } else {
       setEmail("member@bipolarfactory.com");
-      setPassword("demo123");
     }
+    setPassword("");
   };
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
-    setTimeout(() => {
-      loginWithEmail(email);
-      setIsLoading(false);
-
-      if (email.toLowerCase().includes("admin") || selectedRole === "admin") {
-        toast.success(
-          "Signed in as Admin",
-          "Welcome to the Pantry Lead Dashboard, Arun."
-        );
-        router.push("/dashboard");
+    setFormError(null);
+    try {
+      const user = await login(email, password);
+      if (user.role === "admin") {
+        toast.success("Signed in as Admin", `Welcome, ${user.name}.`);
+        router.replace("/dashboard");
       } else {
-        toast.success(
-          "Signed in as Member",
-          "Welcome to the Living Pantry, Priya."
-        );
-        router.push("/home");
+        toast.success("Signed in as Member", `Welcome, ${user.name}.`);
+        router.replace("/home");
       }
-    }, 400);
-  };
-
-  const handleQuickLogin = (role: "admin" | "member") => {
-    setIsLoading(true);
-    loginAs(role);
-
-    setTimeout(() => {
+    } catch (error) {
+      setFormError(
+        error instanceof Error
+          ? error.message
+          : "Unable to sign in. Please try again."
+      );
+    } finally {
       setIsLoading(false);
-      if (role === "admin") {
-        toast.success("Signed in as Admin", "Pantry operations loaded.");
-        router.push("/dashboard");
-      } else {
-        toast.success("Signed in as Member", "Pantry discovery loaded.");
-        router.push("/home");
-      }
-    }, 300);
+    }
   };
 
   return (
@@ -139,15 +136,17 @@ export default function LoginPage() {
               Welcome back
             </h2>
             <p className="text-sm text-neutral-500 dark:text-neutral-400">
-              Select a demo role below to explore the application.
+              Choose your account, then enter its configured password.
             </p>
           </div>
 
-          {/* Role Cards Selector */}
+          {/* Account Selector */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             {/* Member Demo Card */}
-            <div
+            <button
+              type="button"
               onClick={() => handleSelectRole("member")}
+              aria-pressed={selectedRole === "member"}
               className={`p-4 rounded-2xl border transition-all cursor-pointer select-none text-left ${
                 selectedRole === "member"
                   ? "border-orange-500 bg-orange-50/60 dark:bg-orange-950/30 ring-2 ring-orange-500/20 shadow-sm"
@@ -171,11 +170,13 @@ export default function LoginPage() {
               <div className="text-[11px] font-mono text-neutral-400">
                 member@bipolarfactory.com
               </div>
-            </div>
+            </button>
 
             {/* Admin Demo Card */}
-            <div
+            <button
+              type="button"
               onClick={() => handleSelectRole("admin")}
+              aria-pressed={selectedRole === "admin"}
               className={`p-4 rounded-2xl border transition-all cursor-pointer select-none text-left ${
                 selectedRole === "admin"
                   ? "border-orange-500 bg-orange-50/60 dark:bg-orange-950/30 ring-2 ring-orange-500/20 shadow-sm"
@@ -199,18 +200,20 @@ export default function LoginPage() {
               <div className="text-[11px] font-mono text-neutral-400">
                 admin@bipolarfactory.com
               </div>
-            </div>
+            </button>
           </div>
 
           {/* Form */}
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5 text-left">
+                <label htmlFor="login-email" className="block text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5 text-left">
                   Email Address
                 </label>
                 <Input
+                  id="login-email"
                   type="email"
+                  autoComplete="username"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   startIcon={<Envelope className="w-4 h-4" />}
@@ -221,61 +224,60 @@ export default function LoginPage() {
 
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
-                    Demo Password
+                  <label htmlFor="login-password" className="text-xs font-semibold text-neutral-700 dark:text-neutral-300">
+                    Password
                   </label>
-                  <span className="text-[11px] text-neutral-400">
-                    (Any password works in demo)
-                  </span>
                 </div>
                 <Input
+                  id="login-password"
                   type="password"
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   startIcon={<LockKey className="w-4 h-4" />}
-                  placeholder="••••••••"
+                  placeholder="Enter your password"
                   required
                 />
               </div>
             </div>
+
+            {(formError || error) && (
+              <p className="text-sm text-rose-600 dark:text-rose-400" role="alert">
+                {formError || error}
+              </p>
+            )}
 
             <div className="pt-2 flex flex-col sm:flex-row gap-3">
               <Button
                 type="submit"
                 variant="default"
                 size="lg"
-                isLoading={isLoading}
+                isLoading={isLoading || status === "loading"}
                 className="flex-1 gap-2 font-semibold"
               >
-                <span>Enter as {selectedRole === "admin" ? "Admin" : "Member"}</span>
+                <span>Sign in</span>
                 <ArrowRight className="w-4 h-4" weight="bold" />
-              </Button>
-
-              <Button
-                type="button"
-                variant="outline"
-                size="lg"
-                onClick={() =>
-                  handleQuickLogin(selectedRole === "admin" ? "member" : "admin")
-                }
-                className="font-medium"
-              >
-                Switch & Enter as {selectedRole === "admin" ? "Member" : "Admin"}
               </Button>
             </div>
           </form>
 
-          {/* Demo Disclaimer notice */}
+          {/* Local demo account notice */}
           <div className="p-3.5 rounded-2xl bg-neutral-100/80 dark:bg-neutral-800/60 border border-neutral-200/60 dark:border-neutral-700/60 flex items-start gap-2.5 text-left">
             <Info className="w-4 h-4 text-orange-500 shrink-0 mt-0.5" weight="bold" />
             <div className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed">
               <span className="font-semibold text-neutral-900 dark:text-neutral-100">
-                Phase 1 Simulation:
+                Local demo accounts:
               </span>{" "}
-              This is an interactive evaluation prototype powered by realistic
-              mock services. No credentials or session cookies are sent over the network.
+              Enter the password configured for the selected seeded account.
+              Sign-in is verified by the server.
             </div>
           </div>
+
+          {status === "error" && (
+            <Button type="button" variant="outline" onClick={() => void refresh()}>
+              Retry session check
+            </Button>
+          )}
         </div>
       </div>
     </div>

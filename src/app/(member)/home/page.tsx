@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAuthStore } from "@/store/useAuthStore";
+import { useCurrentUser } from "@/store/useAuthStore";
 import {
   useSnacks,
   useSnackOfTheWeek,
@@ -42,7 +42,7 @@ function getTimeGreeting(): string {
 }
 
 export default function MemberHomePage() {
-  const { currentUser } = useAuthStore();
+  const currentUser = useCurrentUser();
   const [selectedSnack, setSelectedSnack] = useState<Snack | null>(null);
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<SnackCategory | "all">("all");

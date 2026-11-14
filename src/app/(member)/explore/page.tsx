@@ -16,7 +16,7 @@ import {
   useConsumeSnack,
   useToggleVote,
 } from "@/lib/api/hooks";
-import { useAuthStore } from "@/store/useAuthStore";
+import { useCurrentUser } from "@/store/useAuthStore";
 import { useToastStore } from "@/store/useToastStore";
 import { Snack, SnackCategory, SnackStatus } from "@/types";
 import { GetSnacksParams } from "@/lib/mock/services/snackService";
@@ -135,7 +135,7 @@ function EmptyState({ hasFilters, onReset }: { hasFilters: boolean; onReset: () 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function ExplorePage() {
-  const { currentUser: user } = useAuthStore();
+  const user = useCurrentUser();
   const { addToast } = useToastStore();
 
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);

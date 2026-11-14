@@ -22,7 +22,7 @@ import {
 import { getStockStatus } from "@/lib/mock/store";
 import { CreateSnackInput } from "@/lib/mock/services/snackService";
 import { Snack, SnackCategory, SnackStatus } from "@/types";
-import { useAuthStore } from "@/store/useAuthStore";
+import { useCurrentUser } from "@/store/useAuthStore";
 import { toast } from "@/store/useToastStore";
 import {
   ArrowClockwise,
@@ -247,7 +247,7 @@ function RestockDialog({
   snack: Snack | null;
   onOpenChange: (snack: Snack | null) => void;
 }) {
-  const { currentUser } = useAuthStore();
+  const currentUser = useCurrentUser();
   const mutation = useRestockSnack();
   const {
     register,

@@ -16,7 +16,7 @@ import {
   useToggleVote,
   useUserVotes,
 } from "@/lib/api/hooks";
-import { useAuthStore } from "@/store/useAuthStore";
+import { useCurrentUser } from "@/store/useAuthStore";
 import { useToastStore } from "@/store/useToastStore";
 import { MyRequestItem } from "@/lib/mock/services/snackRequestService";
 import { ProductRequestStatus, Snack } from "@/types";
@@ -251,7 +251,7 @@ function RequestCard({
 }
 
 export default function MyRequestsPage() {
-  const { currentUser } = useAuthStore();
+  const currentUser = useCurrentUser();
   const { addToast } = useToastStore();
   const [requestModalOpen, setRequestModalOpen] = useState(false);
   const [selectedSnackId, setSelectedSnackId] = useState<string | null>(null);

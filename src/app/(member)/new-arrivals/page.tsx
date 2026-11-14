@@ -4,7 +4,7 @@ import { useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAuthStore } from "@/store/useAuthStore";
+import { useCurrentUser } from "@/store/useAuthStore";
 import { useNewArrivals, useConsumeSnack, useToggleVote, useUserVotes } from "@/lib/api/hooks";
 import { NewArrivalCard } from "@/features/snacks/components/NewArrivalCard";
 import { SnackDetailModal } from "@/features/snacks/components/SnackDetailModal";
@@ -15,7 +15,7 @@ import { Sparkle, Cookie, Plus } from "@phosphor-icons/react";
 import Link from "next/link";
 
 export default function NewArrivalsPage() {
-  const { currentUser } = useAuthStore();
+  const currentUser = useCurrentUser();
   const [selectedSnack, setSelectedSnack] = useState<Snack | null>(null);
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
 
