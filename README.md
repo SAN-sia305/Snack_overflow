@@ -1,76 +1,136 @@
 # Snack Overflow
 
-Snack Overflow is an office pantry application for Bipolar Factory. Members can explore snacks, consume available stock, vote, and submit private product requests. Admins can manage inventory, review product-level demand, record purchases, and inspect pantry activity.
+Snack Overflow is a full-stack office pantry application for Bipolar Factory. 
 
-## Requirements
+- **Members:** Explore available snacks, consume stock in real-time, vote for favorites, and submit private snack requests with status tracking.
+- **Admins:** Manage pantry inventory (CRUD + Restock), review aggregated demand by product, approve/reject/purchase requests, convert purchases into pantry stock (with automatic New Arrival badging), and audit real-time activity and dashboard metrics.
 
-- Node.js 20 or newer
-- pnpm
-- PostgreSQL
+---
 
-## Run locally
+## 1. Prerequisites
 
-Create a local database, copy the environment template, and set the database URL, app origin, and seed passwords in `.env.local`. Do not commit `.env.local`.
+- **Node.js:** v20.x or newer
+- **Package Manager:** `pnpm` (v10+ recommended)
+- **Database:** PostgreSQL (with `pg_trgm` extension support)
+
+---
+
+## 2. Local Setup & Running
+
+### Step 1: Clone & Install Dependencies
+```bash
+git clone <repo-url>
+cd SNACKOVERFLOW
+pnpm install
+```
+
+### Step 2: Configure Environment Variables
+Create a local `.env.local` file (never commit secrets to version control):
+
+```env
+# Database connection URL
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/snackoverflow?schema=public"
+
+# Application origin for CSRF & trusted origin enforcement
+APP_ORIGIN="http://localhost:3000"
+
+# Initial seed passwords for demo accounts (used during pnpm db:seed)
+SEED_ADMIN_PASSWORD="AdminSecurePassword123!"
+SEED_MEMBER_PASSWORD="MemberSecurePassword123!"
+```
+
+### Step 3: Database Migration & Seeding
+Run Prisma migrations and seed the database with initial users, snacks, and historical request data:
 
 ```bash
-pnpm install
 pnpm db:generate
 pnpm db:migrate
 pnpm db:seed
+```
+
+### Step 4: Start Development Server
+```bash
 pnpm dev
 ```
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-Open [http://localhost:3000](http://localhost:3000) and sign in with one of the seeded accounts:
+---
 
-- **Member:** `member@bipolarfactory.com`
-- **Admin:** `admin@bipolarfactory.com`
+## 3. Demo Accounts & Role Journeys
 
-The passwords are the values configured locally as `SEED_MEMBER_PASSWORD` and `SEED_ADMIN_PASSWORD`. The server verifies credentials against Argon2id hashes and determines account roles from PostgreSQL.
+The seed script initializes accounts with Argon2id password hashing and verified employee status:
 
-## Checks
+| Role | Email | Password | Access Rights |
+|---|---|---|---|
+| **Admin** | `admin@bipolarfactory.com` | Value from `SEED_ADMIN_PASSWORD` | Full inventory CRUD, restock, review requests, approve/reject/purchase, add to pantry, activity log, operations dashboard |
+| **Member** | `member@bipolarfactory.com` | Value from `SEED_MEMBER_PASSWORD` | Living pantry home, explore/filter snacks, consume stock, vote (1 per snack), private requests (`/my-requests`) |
+
+---
+
+## 4. Verification & Testing
+
+Run the test suite, linter, type checks, and production build:
 
 ```bash
-pnpm build
-pnpm lint
-pnpm exec tsc --noEmit
+# Run unit & integration test suite (Vitest)
 pnpm test
+
+# Run ESLint rules
+pnpm lint
+
+# Run strict TypeScript compiler verification
+pnpm exec tsc --noEmit
+
+# Run Next.js production build
+pnpm run build
 ```
 
-## Authentication and sessions
+---
 
-Sessions use random opaque tokens in HttpOnly cookies; only SHA-256 token hashes are persisted in PostgreSQL. Cookies are `SameSite=Lax`, use `Secure` in production, and expire after seven days. Cookie-authenticated state-changing endpoints must require an exact `Origin` match with `APP_ORIGIN`; the auth POST endpoints already do so. Server-rendered route guards and API helpers load roles from the session's database user, not client state.
+## 5. Security & Architecture
 
-- Login failures are rate-limited per email and source address in process memory. This is suitable only for a single local development process; production deployments need a shared rate limiter and a trusted proxy that replaces forwarded-address headers.
+### Authentication & Sessions
+- **Session Tokens:** Random 32-byte cryptographically secure tokens stored in `HttpOnly`, `SameSite=Lax` cookies (`snackoverflow_session`). Only SHA-256 hashes of tokens are stored in the database.
+- **Role Enforcement:** Authenticated role checks (`requireAdmin`, `requireMember`) verify identities against PostgreSQL session records on every server request.
+- **CSRF Defense:** State-changing API mutations (`POST`, `PATCH`, `DELETE`) validate the incoming `Origin` header against `APP_ORIGIN`.
+- **Concurrency & Stock Safety:** Concurrency conflicts during consumption (racing for the last packet) are handled via optimistic database checks and return `409 STOCK_CONFLICT` with descriptive feedback (*"Someone beat you to the last packet. Better luck next time."*).
 
-## Snack read API
+### Data & Privacy Invariants
+- **Member Privacy:** The `GET /api/requests/me` endpoint returns strictly the authenticated user's own request records. Demand totals, other requester names, and admin alerts are strictly inaccessible to members.
+- **Product Normalization:** Snack names and request titles are normalized for whitespace, casing, and punctuation to prevent duplicate inventory items and accurately aggregate member demand.
 
-`GET /api/snacks` and `GET /api/snacks/:id` require an authenticated session. List responses have the shape `{ items, pagination: { page, limit, total, totalPages } }`; detail responses have the shape `{ snack }`. Snack DTOs contain the public pantry fields and a vote count, never ORM records.
+---
 
-The list accepts `search` (name or description, up to 100 characters), `category` (`sweet`, `savoury`, `drink`, `healthy-ish`, or `all`), `status` (`stocked`, `running_low`, `gone`, or `all`), `sortBy` (`name-asc`, `name-desc`, `votes-desc`, `quantity-asc`, `quantity-desc`, or `newest`), `newArrivals=true` (active arrival date or created within seven days), `page` (default `1`), and `limit` (default `24`, maximum `100`). Invalid or unknown parameters return `400` with the standard `{ error: { code, message } }` envelope. Sorting uses stable ID tie-breakers. Stock status is derived as `gone` when quantity is zero, `running_low` when quantity is positive and at or below its threshold, otherwise `stocked`.
+## 6. Complete API Reference
 
-## Admin snack CRUD API
+All responses conform to `{ [key]: data }` or `{ error: { code, message } }`.
 
-`POST /api/snacks`, `PATCH /api/snacks/:id`, and `DELETE /api/snacks/:id` require an authenticated Admin session and a trusted `Origin` matching `APP_ORIGIN`. Create accepts the editable inventory fields (`name`, `category`, `description`, `imageUrl`, `quantity`, `lowStockThreshold`, and optional `priceInr`). Updates accept a non-empty subset; set `priceInr` to `null` to clear it, while omitting that field leaves the current price unchanged. Snack names are trimmed and whitespace-normalized for uniqueness. Creating a snack with initial stock records its RESTOCKED activity in the same database transaction. A snack linked to an available request cannot be deleted.
+### Authentication
+- `POST /api/auth/login` — Authenticate using email and password; sets HttpOnly cookie.
+- `GET /api/auth/me` — Return current session user details and role.
+- `POST /api/auth/logout` — Invalidate session in database and clear cookie.
 
-## Snack stock API
+### Snacks & Pantry
+- `GET /api/snacks` — Search and filter snacks (`search`, `category`, `status`, `sortBy`, `newArrivals`, `page`, `limit`).
+- `GET /api/snacks/:id` — Get single snack details.
+- `POST /api/snacks` — *(Admin)* Create a new snack item with initial stock and record activity.
+- `PATCH /api/snacks/:id` — *(Admin)* Update snack attributes (name, category, price, threshold, description).
+- `DELETE /api/snacks/:id` — *(Admin)* Delete snack (prevented if linked to an active request group).
+- `POST /api/snacks/:id/consume` — Decrement stock by 1 packet atomically.
+- `POST /api/snacks/:id/restock` — *(Admin)* Restock snack with quantity and optional audit note.
 
-`POST /api/snacks/:id/consume` requires an authenticated user and atomically decrements one packet only when stock is available; a last-packet race returns `409 STOCK_CONFLICT`. `POST /api/snacks/:id/restock` requires an Admin session and accepts a positive integer `quantity` plus an optional `note`. Each successful stock change and its activity record are committed in one database transaction. Both endpoints require a trusted `Origin`; actor identity is always taken from the server session.
+### Voting
+- `GET /api/votes` — Retrieve list of snack IDs voted by the current user.
+- `POST /api/snacks/:id/vote` — Toggle vote for snack (enforced unique per user in database).
 
-## Vote API
+### Snack Requests
+- `POST /api/requests` — Submit a private snack request (grouped by normalized product name).
+- `GET /api/requests/me` — Get personal requests history and status timeline.
+- `GET /api/requests` — *(Admin)* List product request groups with distinct requester counts.
+- `PATCH /api/requests/:id` — *(Admin)* Transition request status (`approved`, `rejected`, `purchased`).
+- `POST /api/requests/:id/inventory` — *(Admin)* Add purchased product to pantry inventory and mark group as `available`.
 
-`GET /api/votes` returns the authenticated user's voted snack IDs. `POST /api/snacks/:id/vote` toggles that user's vote and returns `{ voted, newCount }`. The user ID is derived from the session, and the database's `(userId, snackId)` unique constraint prevents duplicate votes. Vote-changing requests require a trusted `Origin`.
-
-## Member snack requests
-
-`POST /api/requests` accepts a product name, expected INR price, and optional note for an authenticated Member. Requests are grouped by normalized product name, while duplicate requests from the same member are rejected. `GET /api/requests/me` returns only the session member's own requests and their product status; it never includes other requesters or community totals.
-
-## Architecture
-
-- `src/app/` contains App Router pages and Route Handlers.
-- `src/components/` contains the shared navigation and UI primitives.
-- `src/features/` contains reusable snack and request components.
-- `src/lib/mock/data/` contains deterministic seed users, snacks, requests, and activity.
-- `prisma/` contains the PostgreSQL data model, migrations, and local seed.
-- `src/lib/server/` contains Prisma and server-only authentication helpers.
-- `src/lib/mock/` and `src/lib/api/hooks.ts` still provide mock implementations for pantry features awaiting API integration.
-- `src/store/` contains transient client state for the authenticated profile, theme, and toast UI. Session identity is not persisted in browser storage.
+### Operations & Activity
+- `GET /api/admin/summary` — *(Admin)* Inventory health breakdown, low stock count, pending request count, and vote statistics.
+- `GET /api/admin/alerts` — *(Admin)* Actionable smart alerts for running-low inventory and top-demand requests.
+- `GET /api/activity` — *(Admin)* Audit trail of consumption, restocking, and request status updates.
