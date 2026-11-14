@@ -263,3 +263,48 @@ export async function restockSnack(
     return { kind: "updated", snack };
   });
 }
+
+export async function findVoteSnackIdsByUser(
+  userId: string
+): Promise<string[]> {
+  const votes = await prisma.vote.findMany({
+    where: { userId },
+    select: { snackId: true },
+    orderBy: { snackId: "asc" },
+  });
+  return votes.map((vote) => vote.snackId);
+}
+
+export type ToggleVoteResult =
+  | { kind: "toggled"; voted: boolean; newCount: number }
+  | { kind: "not_found" };
+
+export async function toggleSnackVote(
+  snackId: string,
+  userId: string
+): Promise<ToggleVoteResult> {
+  return prisma.$transaction(async (transaction) => {
+    const snack = await transaction.snack.findUnique({
+      where: { id: snackId },
+      select: { id: true },
+    });
+    if (!snack) {
+      return { kind: "not_found" };
+    }
+
+    const existingVote = await transaction.vote.findUnique({
+      where: { userId_snackId: { userId, snackId } },
+      select: { id: true },
+    });
+
+    const voted = !existingVote;
+    if (existingVote) {
+      await transaction.vote.delete({ where: { id: existingVote.id } });
+    } else {
+      await transaction.vote.create({ data: { userId, snackId } });
+    }
+
+    const newCount = await transaction.vote.count({ where: { snackId } });
+    return { kind: "toggled", voted, newCount };
+  });
+}

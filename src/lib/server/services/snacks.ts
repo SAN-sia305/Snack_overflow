@@ -10,11 +10,13 @@ import {
   consumeSnack as consumeSnackRecord,
   createSnack as createSnackRecord,
   deleteSnack as deleteSnackRecord,
+  findVoteSnackIdsByUser,
   findRequestGroupLinkedToSnack,
   findSnackById,
   findSnacks,
   restockSnack as restockSnackRecord,
   SnackRecord,
+  toggleSnackVote as toggleSnackVoteRecord,
   updateSnack as updateSnackRecord,
 } from "@/lib/server/repositories/snacks";
 import { ApiError } from "@/lib/server/api-response";
@@ -185,4 +187,20 @@ export async function restockSnack(
   }
 
   return toSnackDto(result.snack);
+}
+
+export function getUserVoteSnackIds(userId: string): Promise<string[]> {
+  return findVoteSnackIdsByUser(userId);
+}
+
+export async function toggleSnackVote(
+  snackId: string,
+  userId: string
+): Promise<{ voted: boolean; newCount: number }> {
+  const result = await toggleSnackVoteRecord(snackId, userId);
+  if (result.kind === "not_found") {
+    throw new ApiError("NOT_FOUND", "Snack was not found.", 404);
+  }
+
+  return { voted: result.voted, newCount: result.newCount };
 }

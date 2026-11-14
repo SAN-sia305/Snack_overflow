@@ -56,6 +56,10 @@ The list accepts `search` (name or description, up to 100 characters), `category
 
 `POST /api/snacks/:id/consume` requires an authenticated user and atomically decrements one packet only when stock is available; a last-packet race returns `409 STOCK_CONFLICT`. `POST /api/snacks/:id/restock` requires an Admin session and accepts a positive integer `quantity` plus an optional `note`. Each successful stock change and its activity record are committed in one database transaction. Both endpoints require a trusted `Origin`; actor identity is always taken from the server session.
 
+## Vote API
+
+`GET /api/votes` returns the authenticated user's voted snack IDs. `POST /api/snacks/:id/vote` toggles that user's vote and returns `{ voted, newCount }`. The user ID is derived from the session, and the database's `(userId, snackId)` unique constraint prevents duplicate votes. Vote-changing requests require a trusted `Origin`.
+
 ## Architecture
 
 - `src/app/` contains App Router pages and Route Handlers.

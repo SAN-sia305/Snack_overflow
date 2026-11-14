@@ -1,7 +1,6 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { snackService } from "@/lib/mock/services/snackService";
 import type {
   CreateSnackInput,
   GetSnacksParams,
@@ -16,7 +15,10 @@ import {
   updateSnack as updateSnackApi,
 } from "@/lib/api/snacks";
 import type { UpdateSnackInput } from "@/lib/api/snacks";
-import { voteService } from "@/lib/mock/services/voteService";
+import {
+  fetchUserVotes,
+  toggleVote as toggleVoteApi,
+} from "@/lib/api/votes";
 import { snackRequestService, SubmitSnackRequestInput } from "@/lib/mock/services/snackRequestService";
 import { adminService, AddPurchasedToInventoryInput } from "@/lib/mock/services/adminService";
 import { activityService, GetActivitiesParams } from "@/lib/mock/services/activityService";
@@ -45,13 +47,8 @@ export function useSnackOfTheWeek() {
   return useQuery({
     queryKey: ["snackOfTheWeek"],
     queryFn: async () => {
-      const featured = await snackService.getSnackOfTheWeek();
-      if (!featured) {
-        return null;
-      }
-
-      const snack = await fetchSnack(featured.id);
-      return snack ? { ...snack, voteCount: featured.voteCount } : null;
+      const snacks = await fetchSnacks({ sortBy: "votes-desc", limit: 1 });
+      return snacks[0] ?? null;
     },
   });
 }
@@ -59,19 +56,7 @@ export function useSnackOfTheWeek() {
 export function useNewArrivals() {
   return useQuery({
     queryKey: ["newArrivals"],
-    queryFn: async () => {
-      const [arrivals, mockSnacks] = await Promise.all([
-        fetchSnacks({ newArrivals: true, sortBy: "newest" }),
-        snackService.getSnacks(),
-      ]);
-      const voteCounts = new Map(
-        mockSnacks.map((snack) => [snack.id, snack.voteCount])
-      );
-      return arrivals.map((snack) => ({
-        ...snack,
-        voteCount: voteCounts.get(snack.id) ?? snack.voteCount,
-      }));
-    },
+    queryFn: () => fetchSnacks({ newArrivals: true, sortBy: "newest" }),
   });
 }
 
@@ -229,7 +214,7 @@ export function useDeleteSnack() {
 export function useUserVotes(userId: string) {
   return useQuery({
     queryKey: ["userVotes", userId],
-    queryFn: () => voteService.getUserVotes(userId),
+    queryFn: fetchUserVotes,
     enabled: !!userId,
   });
 }
@@ -238,8 +223,12 @@ export function useToggleVote() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ snackId, userId }: { snackId: string; userId: string }) =>
-      voteService.toggleVote(snackId, userId),
+    mutationFn: ({
+      snackId,
+    }: {
+      snackId: string;
+      userId: string;
+    }) => toggleVoteApi(snackId),
     onMutate: async ({ snackId, userId }) => {
       const userVotesKey = ["userVotes", userId];
       await Promise.all([
