@@ -4,7 +4,7 @@ import Image from "next/image";
 import { Snack } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { getStockStatus } from "@/lib/mock/store";
+import { getStockStatus } from "@/lib/domain/stock";
 import { ThumbsUp, Star, Cookie, ArrowRight } from "@phosphor-icons/react";
 
 export function SnackOfTheWeekCard({

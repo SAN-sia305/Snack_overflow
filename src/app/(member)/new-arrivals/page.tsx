@@ -4,7 +4,7 @@ import { useState } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAuthStore } from "@/store/useAuthStore";
+import { useCurrentUser } from "@/store/useAuthStore";
 import { useNewArrivals, useConsumeSnack, useToggleVote, useUserVotes } from "@/lib/api/hooks";
 import { NewArrivalCard } from "@/features/snacks/components/NewArrivalCard";
 import { SnackDetailModal } from "@/features/snacks/components/SnackDetailModal";
@@ -15,7 +15,7 @@ import { Sparkle, Cookie, Plus } from "@phosphor-icons/react";
 import Link from "next/link";
 
 export default function NewArrivalsPage() {
-  const { currentUser } = useAuthStore();
+  const currentUser = useCurrentUser();
   const [selectedSnack, setSelectedSnack] = useState<Snack | null>(null);
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
 
@@ -27,10 +27,7 @@ export default function NewArrivalsPage() {
 
   const handleConsume = async (snack: Snack) => {
     try {
-      await consumeMutation.mutateAsync({
-        snackId: snack.id,
-        user: { id: currentUser.id, name: currentUser.name, role: currentUser.role },
-      });
+      await consumeMutation.mutateAsync({ snackId: snack.id });
       toast.success("Enjoy your snack!", `Consumed 1 packet of ${snack.name}.`);
     } catch (err: unknown) {
       if (err instanceof Error && "code" in err && err.code === "STOCK_CONFLICT") {

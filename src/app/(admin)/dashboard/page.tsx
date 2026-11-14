@@ -12,7 +12,7 @@ import {
   useAdminSummary,
   useProductRequests,
 } from "@/lib/api/hooks";
-import { useAuthStore } from "@/store/useAuthStore";
+import { useCurrentUser } from "@/store/useAuthStore";
 import {
   ArrowDownRight,
   ArrowRight,
@@ -111,7 +111,7 @@ function PanelError({
 }
 
 export default function AdminDashboardPage() {
-  const { currentUser } = useAuthStore();
+  const currentUser = useCurrentUser();
   const summaryQuery = useAdminSummary();
   const alertsQuery = useAdminAlerts();
   const requestsQuery = useProductRequests("requested");

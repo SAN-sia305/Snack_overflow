@@ -19,10 +19,10 @@ import {
   useSnacks,
   useUpdateSnack,
 } from "@/lib/api/hooks";
-import { getStockStatus } from "@/lib/mock/store";
-import { CreateSnackInput } from "@/lib/mock/services/snackService";
+import { getStockStatus } from "@/lib/domain/stock";
+import type { CreateSnackPayload as CreateSnackInput } from "@/lib/api/snack-contracts";
+import { UpdateSnackInput } from "@/lib/api/snacks";
 import { Snack, SnackCategory, SnackStatus } from "@/types";
-import { useAuthStore } from "@/store/useAuthStore";
 import { toast } from "@/store/useToastStore";
 import {
   ArrowClockwise,
@@ -50,7 +50,7 @@ const snackSchema = z.object({
 type SnackFormData = z.infer<typeof snackSchema>;
 
 const restockSchema = z.object({
-  quantity: z.number().int("Enter a whole number").positive("Enter at least 1 packet"),
+  quantity: z.number().int("Enter a whole number").positive("Enter at least 1 packet").max(2_147_483_647, "Quantity is too high"),
   note: z.string().max(200, "Note must be under 200 characters").optional(),
 });
 
@@ -119,23 +119,23 @@ function SnackFormDialog({
     reset(
       snack
         ? {
-            name: snack.name,
-            category: snack.category,
-            description: snack.description,
-            quantity: snack.quantity,
-            lowStockThreshold: snack.lowStockThreshold,
-            imageUrl: snack.imageUrl,
-            priceInr: snack.priceInr ?? Number.NaN,
-          }
+          name: snack.name,
+          category: snack.category,
+          description: snack.description,
+          quantity: snack.quantity,
+          lowStockThreshold: snack.lowStockThreshold,
+          imageUrl: snack.imageUrl,
+          priceInr: snack.priceInr ?? Number.NaN,
+        }
         : {
-            name: "",
-            category: "sweet",
-            description: "",
-            quantity: 0,
-            lowStockThreshold: 5,
-            imageUrl: "https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=600&auto=format&fit=crop&q=80",
-            priceInr: Number.NaN,
-          }
+          name: "",
+          category: "sweet",
+          description: "",
+          quantity: 0,
+          lowStockThreshold: 5,
+          imageUrl: "https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=600&auto=format&fit=crop&q=80",
+          priceInr: Number.NaN,
+        }
     );
   }, [open, snack, reset]);
 
@@ -150,7 +150,11 @@ function SnackFormDialog({
 
     try {
       if (snack) {
-        await updateMutation.mutateAsync({ id: snack.id, updates: input });
+        const updates: UpdateSnackInput = {
+          ...input,
+          priceInr: input.priceInr ?? null,
+        };
+        await updateMutation.mutateAsync({ id: snack.id, updates });
         toast.success("Snack updated", `${data.name} has been updated.`);
       } else {
         await createMutation.mutateAsync(input);
@@ -247,7 +251,6 @@ function RestockDialog({
   snack: Snack | null;
   onOpenChange: (snack: Snack | null) => void;
 }) {
-  const { currentUser } = useAuthStore();
   const mutation = useRestockSnack();
   const {
     register,
@@ -272,11 +275,6 @@ function RestockDialog({
         snackId: snack.id,
         quantity: data.quantity,
         note: data.note?.trim() || undefined,
-        user: {
-          id: currentUser.id,
-          name: currentUser.name,
-          role: currentUser.role,
-        },
       });
       toast.success(
         "Stock updated",

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAuthStore } from "@/store/useAuthStore";
+import { useCurrentUser } from "@/store/useAuthStore";
 import {
   useSnacks,
   useSnackOfTheWeek,
@@ -24,7 +24,7 @@ import { SnackDetailModal } from "@/features/snacks/components/SnackDetailModal"
 import { RequestSnackModal } from "@/features/requests/components/RequestSnackModal";
 import { Snack, SnackCategory } from "@/types";
 import { toast } from "@/store/useToastStore";
-import { getStockStatus } from "@/lib/mock/store";
+import { getStockStatus } from "@/lib/domain/stock";
 import {
   Sparkle,
   Compass,
@@ -42,7 +42,7 @@ function getTimeGreeting(): string {
 }
 
 export default function MemberHomePage() {
-  const { currentUser } = useAuthStore();
+  const currentUser = useCurrentUser();
   const [selectedSnack, setSelectedSnack] = useState<Snack | null>(null);
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [activeCategory, setActiveCategory] = useState<SnackCategory | "all">("all");
@@ -74,10 +74,7 @@ export default function MemberHomePage() {
 
   const handleConsume = async (snack: Snack) => {
     try {
-      await consumeMutation.mutateAsync({
-        snackId: snack.id,
-        user: { id: currentUser.id, name: currentUser.name, role: currentUser.role },
-      });
+      await consumeMutation.mutateAsync({ snackId: snack.id });
       toast.success(
         "Enjoy your snack!",
         `Consumed 1 packet of ${snack.name}. Pantry stock updated.`

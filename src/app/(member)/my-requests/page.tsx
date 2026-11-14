@@ -16,9 +16,9 @@ import {
   useToggleVote,
   useUserVotes,
 } from "@/lib/api/hooks";
-import { useAuthStore } from "@/store/useAuthStore";
+import { useCurrentUser } from "@/store/useAuthStore";
 import { useToastStore } from "@/store/useToastStore";
-import { MyRequestItem } from "@/lib/mock/services/snackRequestService";
+import type { MyRequestItem } from "@/lib/api/request-contracts";
 import { ProductRequestStatus, Snack } from "@/types";
 import {
   ArrowRight,
@@ -251,7 +251,7 @@ function RequestCard({
 }
 
 export default function MyRequestsPage() {
-  const { currentUser } = useAuthStore();
+  const currentUser = useCurrentUser();
   const { addToast } = useToastStore();
   const [requestModalOpen, setRequestModalOpen] = useState(false);
   const [selectedSnackId, setSelectedSnackId] = useState<string | null>(null);
@@ -263,14 +263,7 @@ export default function MyRequestsPage() {
 
   const handleConsume = async (snack: Snack) => {
     try {
-      await consumeMutation.mutateAsync({
-        snackId: snack.id,
-        user: {
-          id: currentUser.id,
-          name: currentUser.name,
-          role: currentUser.role,
-        },
-      });
+      await consumeMutation.mutateAsync({ snackId: snack.id });
       addToast({
         type: "success",
         title: "Consumed!",

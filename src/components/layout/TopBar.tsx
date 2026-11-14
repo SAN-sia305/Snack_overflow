@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useAuthStore } from "@/store/useAuthStore";
+import { useCurrentUser } from "@/store/useAuthStore";
 import { ThemeToggle } from "./ThemeToggle";
 import { ProfileMenu } from "./ProfileMenu";
 import { RoleBadge } from "./RoleBadge";
 import { Cookie } from "@phosphor-icons/react";
 
 export function TopBar({ title }: { title?: string }) {
-  const { currentUser } = useAuthStore();
+  const currentUser = useCurrentUser();
   const homeHref = currentUser.role === "admin" ? "/dashboard" : "/home";
 
   return (

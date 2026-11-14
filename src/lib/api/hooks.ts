@@ -1,11 +1,41 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { snackService, GetSnacksParams, CreateSnackInput } from "@/lib/mock/services/snackService";
-import { voteService } from "@/lib/mock/services/voteService";
-import { snackRequestService, SubmitSnackRequestInput } from "@/lib/mock/services/snackRequestService";
-import { adminService, AddPurchasedToInventoryInput } from "@/lib/mock/services/adminService";
-import { activityService, GetActivitiesParams } from "@/lib/mock/services/activityService";
+import type {
+  CreateSnackInput,
+  GetSnacksParams,
+  UpdateSnackInput,
+} from "@/lib/api/snacks";
+import {
+  consumeSnack as consumeSnackApi,
+  createSnack as createSnackApi,
+  deleteSnack as deleteSnackApi,
+  fetchSnack,
+  fetchSnacks,
+  restockSnack as restockSnackApi,
+  updateSnack as updateSnackApi,
+} from "@/lib/api/snacks";
+import {
+  fetchUserVotes,
+  toggleVote as toggleVoteApi,
+} from "@/lib/api/votes";
+import {
+  fetchAdminProductRequests as fetchAdminProductRequestsApi,
+  fetchMyRequests as fetchMyRequestsApi,
+  submitSnackRequest as submitSnackRequestApi,
+  updateProductRequestStatus as updateProductRequestStatusApi,
+  addPurchasedToInventory as addPurchasedToInventoryApi,
+} from "@/lib/api/requests";
+import type {
+  AddPurchasedToInventoryPayload,
+  SubmitSnackRequestInput,
+} from "@/lib/api/request-contracts";
+import {
+  fetchAdminAlerts as fetchAdminAlertsApi,
+  fetchAdminSummary as fetchAdminSummaryApi,
+  fetchAdminActivities as fetchAdminActivitiesApi,
+  type GetActivitiesParams,
+} from "@/lib/api/admin";
 import { ProductRequestStatus, Snack } from "@/types";
 
 // ========================
@@ -15,14 +45,14 @@ import { ProductRequestStatus, Snack } from "@/types";
 export function useSnacks(params: GetSnacksParams = {}) {
   return useQuery({
     queryKey: ["snacks", params],
-    queryFn: () => snackService.getSnacks(params),
+    queryFn: () => fetchSnacks(params),
   });
 }
 
 export function useSnack(id: string) {
   return useQuery({
     queryKey: ["snack", id],
-    queryFn: () => snackService.getSnackById(id),
+    queryFn: () => fetchSnack(id),
     enabled: !!id,
   });
 }
@@ -30,14 +60,17 @@ export function useSnack(id: string) {
 export function useSnackOfTheWeek() {
   return useQuery({
     queryKey: ["snackOfTheWeek"],
-    queryFn: () => snackService.getSnackOfTheWeek(),
+    queryFn: async () => {
+      const snacks = await fetchSnacks({ sortBy: "votes-desc", limit: 1 });
+      return snacks[0] ?? null;
+    },
   });
 }
 
 export function useNewArrivals() {
   return useQuery({
     queryKey: ["newArrivals"],
-    queryFn: () => snackService.getNewArrivals(),
+    queryFn: () => fetchSnacks({ newArrivals: true, sortBy: "newest" }),
   });
 }
 
@@ -45,13 +78,8 @@ export function useConsumeSnack() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      snackId,
-      user,
-    }: {
-      snackId: string;
-      user: { id: string; name: string; role: "admin" | "member" };
-    }) => snackService.consumeSnack(snackId, user),
+    mutationFn: ({ snackId }: { snackId: string }) =>
+      consumeSnackApi(snackId),
     onMutate: async ({ snackId }) => {
       await Promise.all([
         queryClient.cancelQueries({ queryKey: ["snacks"] }),
@@ -121,17 +149,16 @@ export function useRestockSnack() {
       snackId,
       quantity,
       note,
-      user,
     }: {
       snackId: string;
       quantity: number;
       note?: string;
-      user?: { id: string; name: string; role: "admin" | "member" };
-    }) => snackService.restockSnack(snackId, quantity, note, user),
+    }) => restockSnackApi(snackId, { quantity, note }),
     onSuccess: (updatedSnack) => {
       queryClient.invalidateQueries({ queryKey: ["snacks"] });
       queryClient.invalidateQueries({ queryKey: ["snack", updatedSnack.id] });
       queryClient.invalidateQueries({ queryKey: ["newArrivals"] });
+      queryClient.invalidateQueries({ queryKey: ["snackOfTheWeek"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "summary"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "alerts"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "activities"] });
@@ -143,13 +170,12 @@ export function useCreateSnack() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: CreateSnackInput) => snackService.createSnack(input),
-    onSuccess: (_, id) => {
+    mutationFn: (input: CreateSnackInput) => createSnackApi(input),
+    onSuccess: (snack) => {
       queryClient.invalidateQueries({ queryKey: ["snacks"] });
-      queryClient.invalidateQueries({ queryKey: ["snack", id] });
+      queryClient.invalidateQueries({ queryKey: ["snack", snack.id] });
       queryClient.invalidateQueries({ queryKey: ["newArrivals"] });
       queryClient.invalidateQueries({ queryKey: ["snackOfTheWeek"] });
-      queryClient.invalidateQueries({ queryKey: ["userVotes"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "activities"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "summary"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "alerts"] });
@@ -166,8 +192,8 @@ export function useUpdateSnack() {
       updates,
     }: {
       id: string;
-      updates: Partial<CreateSnackInput>;
-    }) => snackService.updateSnack(id, updates),
+      updates: UpdateSnackInput;
+    }) => updateSnackApi(id, updates),
     onSuccess: (updatedSnack) => {
       queryClient.invalidateQueries({ queryKey: ["snacks"] });
       queryClient.invalidateQueries({ queryKey: ["snack", updatedSnack.id] });
@@ -182,9 +208,10 @@ export function useDeleteSnack() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => snackService.deleteSnack(id),
-    onSuccess: () => {
+    mutationFn: (id: string) => deleteSnackApi(id),
+    onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ["snacks"] });
+      queryClient.removeQueries({ queryKey: ["snack", id], exact: true });
       queryClient.invalidateQueries({ queryKey: ["newArrivals"] });
       queryClient.invalidateQueries({ queryKey: ["snackOfTheWeek"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "activities"] });
@@ -201,7 +228,7 @@ export function useDeleteSnack() {
 export function useUserVotes(userId: string) {
   return useQuery({
     queryKey: ["userVotes", userId],
-    queryFn: () => voteService.getUserVotes(userId),
+    queryFn: fetchUserVotes,
     enabled: !!userId,
   });
 }
@@ -210,8 +237,12 @@ export function useToggleVote() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ snackId, userId }: { snackId: string; userId: string }) =>
-      voteService.toggleVote(snackId, userId),
+    mutationFn: ({
+      snackId,
+    }: {
+      snackId: string;
+      userId: string;
+    }) => toggleVoteApi(snackId),
     onMutate: async ({ snackId, userId }) => {
       const userVotesKey = ["userVotes", userId];
       await Promise.all([
@@ -300,7 +331,7 @@ export function useToggleVote() {
 export function useMyRequests(userId: string) {
   return useQuery({
     queryKey: ["myRequests", userId],
-    queryFn: () => snackRequestService.getMyRequests(userId),
+    queryFn: fetchMyRequestsApi,
     enabled: !!userId,
   });
 }
@@ -310,12 +341,11 @@ export function useSubmitSnackRequest() {
 
   return useMutation({
     mutationFn: ({
-      userId,
       input,
     }: {
       userId: string;
       input: SubmitSnackRequestInput;
-    }) => snackRequestService.submitRequest(userId, input),
+    }) => submitSnackRequestApi(input),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["myRequests", variables.userId] });
       queryClient.invalidateQueries({ queryKey: ["admin", "requests"] });
@@ -332,21 +362,21 @@ export function useSubmitSnackRequest() {
 export function useAdminSummary() {
   return useQuery({
     queryKey: ["admin", "summary"],
-    queryFn: () => adminService.getAdminSummary(),
+    queryFn: fetchAdminSummaryApi,
   });
 }
 
 export function useAdminAlerts() {
   return useQuery({
     queryKey: ["admin", "alerts"],
-    queryFn: () => adminService.getAdminAlerts(),
+    queryFn: fetchAdminAlertsApi,
   });
 }
 
 export function useProductRequests(statusFilter?: ProductRequestStatus | "all") {
   return useQuery({
     queryKey: ["admin", "requests", statusFilter],
-    queryFn: () => adminService.getProductRequests(statusFilter),
+    queryFn: () => fetchAdminProductRequestsApi(statusFilter),
   });
 }
 
@@ -360,14 +390,15 @@ export function useUpdateProductRequestStatus() {
       decisionNote,
     }: {
       id: string;
-      status: ProductRequestStatus;
+      status: "approved" | "rejected" | "purchased";
       decisionNote?: string;
-    }) => adminService.updateProductRequestStatus(id, status, decisionNote),
+    }) => updateProductRequestStatusApi(id, { status, decisionNote }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "requests"] });
       queryClient.invalidateQueries({ queryKey: ["myRequests"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "summary"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "alerts"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "activities"] });
     },
   });
 }
@@ -381,8 +412,8 @@ export function useAddPurchasedToInventory() {
       snackData,
     }: {
       productRequestId: string;
-      snackData: AddPurchasedToInventoryInput;
-    }) => adminService.addPurchasedToInventory(productRequestId, snackData),
+      snackData: AddPurchasedToInventoryPayload;
+    }) => addPurchasedToInventoryApi(productRequestId, snackData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "requests"] });
       queryClient.invalidateQueries({ queryKey: ["myRequests"] });
@@ -398,6 +429,6 @@ export function useAddPurchasedToInventory() {
 export function useAdminActivities(params: GetActivitiesParams = {}) {
   return useQuery({
     queryKey: ["admin", "activities", params],
-    queryFn: () => activityService.getActivities(params),
+    queryFn: () => fetchAdminActivitiesApi(params),
   });
 }

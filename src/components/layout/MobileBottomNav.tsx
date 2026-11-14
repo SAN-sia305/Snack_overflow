@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAuthStore } from "@/store/useAuthStore";
+import { useCurrentUser } from "@/store/useAuthStore";
 import { cn } from "@/lib/utils";
 import {
   House,
@@ -16,7 +16,7 @@ import {
 
 export function MobileBottomNav() {
   const pathname = usePathname();
-  const { currentUser } = useAuthStore();
+  const currentUser = useCurrentUser();
   const isAdmin = currentUser.role === "admin";
 
   const memberNav = [

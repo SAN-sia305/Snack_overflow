@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAuthStore } from "@/store/useAuthStore";
+import { useCurrentUser } from "@/store/useAuthStore";
 import { cn } from "@/lib/utils";
 import {
   House,
@@ -13,12 +13,11 @@ import {
   Package,
   ClockCounterClockwise,
   PlusCircle,
-  ArrowsLeftRight,
 } from "@phosphor-icons/react";
 
 export function DesktopSidebar() {
   const pathname = usePathname();
-  const { currentUser, switchRole } = useAuthStore();
+  const currentUser = useCurrentUser();
   const isAdmin = currentUser.role === "admin";
 
   const memberNav = [
@@ -93,24 +92,20 @@ export function DesktopSidebar() {
         </div>
       )}
 
-      {/* Bottom Switch Role Card */}
+      {/* Current account role */}
       <div className="mt-auto pt-4 border-t border-neutral-200/70 dark:border-neutral-800/70">
         <div className="p-3 rounded-xl bg-neutral-100/80 dark:bg-neutral-800/60 border border-neutral-200/50 dark:border-neutral-700/50">
           <div className="flex items-center justify-between text-xs mb-1.5">
             <span className="font-semibold text-neutral-700 dark:text-neutral-300">
-              Demo Evaluator
+              Signed in as
             </span>
             <span className="text-[10px] uppercase font-bold text-orange-600 dark:text-orange-400">
               {currentUser.role}
             </span>
           </div>
-          <button
-            onClick={switchRole}
-            className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-lg text-xs font-medium text-neutral-600 dark:text-neutral-400 hover:bg-white dark:hover:bg-neutral-700 hover:text-neutral-900 dark:hover:text-neutral-100 transition-all shadow-2xs cursor-pointer"
-          >
-            <ArrowsLeftRight className="w-3.5 h-3.5 text-orange-500" weight="bold" />
-            <span>Switch to {isAdmin ? "Member" : "Admin"}</span>
-          </button>
+          <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
+            {currentUser.name}
+          </p>
         </div>
       </div>
     </aside>

@@ -6,7 +6,7 @@ import * as z from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useAuthStore } from "@/store/useAuthStore";
+import { useCurrentUser } from "@/store/useAuthStore";
 import { useSubmitSnackRequest } from "@/lib/api/hooks";
 import { toast } from "@/store/useToastStore";
 import { Tray, CurrencyInr } from "@phosphor-icons/react";
@@ -34,7 +34,7 @@ export function RequestSnackModal({
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
 }) {
-  const { currentUser } = useAuthStore();
+  const currentUser = useCurrentUser();
   const submitMutation = useSubmitSnackRequest();
 
   const {

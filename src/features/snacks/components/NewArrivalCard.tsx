@@ -4,7 +4,7 @@ import Image from "next/image";
 import { Snack } from "@/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { getStockStatus } from "@/lib/mock/store";
+import { getStockStatus } from "@/lib/domain/stock";
 import { Sparkle, CalendarBlank, ThumbsUp } from "@phosphor-icons/react";
 import { motion } from "framer-motion";
 

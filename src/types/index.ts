@@ -18,10 +18,12 @@ export interface User {
   name: string;
   email: string;
   role: UserRole;
-  avatarUrl: string;
+  avatarUrl?: string;
   isVerified: boolean;
   department?: string;
 }
+
+export type AuthUser = Omit<User, "isVerified">;
 
 export interface Snack {
   id: string;

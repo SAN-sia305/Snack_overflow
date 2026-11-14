@@ -16,10 +16,10 @@ import {
   useConsumeSnack,
   useToggleVote,
 } from "@/lib/api/hooks";
-import { useAuthStore } from "@/store/useAuthStore";
+import { useCurrentUser } from "@/store/useAuthStore";
 import { useToastStore } from "@/store/useToastStore";
 import { Snack, SnackCategory, SnackStatus } from "@/types";
-import { GetSnacksParams } from "@/lib/mock/services/snackService";
+import type { GetSnacksParams } from "@/lib/api/snacks";
 import {
   MagnifyingGlass,
   Compass,
@@ -135,7 +135,7 @@ function EmptyState({ hasFilters, onReset }: { hasFilters: boolean; onReset: () 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function ExplorePage() {
-  const { currentUser: user } = useAuthStore();
+  const user = useCurrentUser();
   const { addToast } = useToastStore();
 
   const [filters, setFilters] = useState<FilterState>(INITIAL_FILTERS);
@@ -209,7 +209,7 @@ export default function ExplorePage() {
     if (!user) return;
     setConsumingId(snack.id);
     try {
-      await consumeMutation.mutateAsync({ snackId: snack.id, user });
+      await consumeMutation.mutateAsync({ snackId: snack.id });
       addToast({ type: "success", title: "Consumed!", message: `Enjoyed ${snack.name}! Quantity updated.` });
       // Update modal snack if open
       if (selectedSnack?.id === snack.id) {
