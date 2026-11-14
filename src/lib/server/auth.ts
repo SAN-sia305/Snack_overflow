@@ -93,3 +93,13 @@ export async function requireAdmin(
   return user;
 }
 
+export async function requireMember(
+  request?: NextRequest
+): Promise<AuthUser> {
+  const user = await requireUser(request);
+  if (user.role !== "member") {
+    throw new AuthenticationError("Member access required.", 403);
+  }
+  return user;
+}
+

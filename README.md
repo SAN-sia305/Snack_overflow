@@ -60,6 +60,10 @@ The list accepts `search` (name or description, up to 100 characters), `category
 
 `GET /api/votes` returns the authenticated user's voted snack IDs. `POST /api/snacks/:id/vote` toggles that user's vote and returns `{ voted, newCount }`. The user ID is derived from the session, and the database's `(userId, snackId)` unique constraint prevents duplicate votes. Vote-changing requests require a trusted `Origin`.
 
+## Member snack requests
+
+`POST /api/requests` accepts a product name, expected INR price, and optional note for an authenticated Member. Requests are grouped by normalized product name, while duplicate requests from the same member are rejected. `GET /api/requests/me` returns only the session member's own requests and their product status; it never includes other requesters or community totals.
+
 ## Architecture
 
 - `src/app/` contains App Router pages and Route Handlers.

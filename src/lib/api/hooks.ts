@@ -19,7 +19,11 @@ import {
   fetchUserVotes,
   toggleVote as toggleVoteApi,
 } from "@/lib/api/votes";
-import { snackRequestService, SubmitSnackRequestInput } from "@/lib/mock/services/snackRequestService";
+import {
+  fetchMyRequests as fetchMyRequestsApi,
+  submitSnackRequest as submitSnackRequestApi,
+} from "@/lib/api/requests";
+import type { SubmitSnackRequestInput } from "@/lib/api/request-contracts";
 import { adminService, AddPurchasedToInventoryInput } from "@/lib/mock/services/adminService";
 import { activityService, GetActivitiesParams } from "@/lib/mock/services/activityService";
 import { ProductRequestStatus, Snack } from "@/types";
@@ -317,7 +321,7 @@ export function useToggleVote() {
 export function useMyRequests(userId: string) {
   return useQuery({
     queryKey: ["myRequests", userId],
-    queryFn: () => snackRequestService.getMyRequests(userId),
+    queryFn: fetchMyRequestsApi,
     enabled: !!userId,
   });
 }
@@ -327,12 +331,11 @@ export function useSubmitSnackRequest() {
 
   return useMutation({
     mutationFn: ({
-      userId,
       input,
     }: {
       userId: string;
       input: SubmitSnackRequestInput;
-    }) => snackRequestService.submitRequest(userId, input),
+    }) => submitSnackRequestApi(input),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["myRequests", variables.userId] });
       queryClient.invalidateQueries({ queryKey: ["admin", "requests"] });
