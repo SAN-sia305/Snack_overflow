@@ -1,15 +1,21 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { snackService, GetSnacksParams, CreateSnackInput } from "@/lib/mock/services/snackService";
+import { snackService } from "@/lib/mock/services/snackService";
+import type {
+  CreateSnackInput,
+  GetSnacksParams,
+} from "@/lib/mock/services/snackService";
 import {
+  consumeSnack as consumeSnackApi,
   createSnack as createSnackApi,
   deleteSnack as deleteSnackApi,
   fetchSnack,
   fetchSnacks,
+  restockSnack as restockSnackApi,
   updateSnack as updateSnackApi,
-  UpdateSnackInput,
 } from "@/lib/api/snacks";
+import type { UpdateSnackInput } from "@/lib/api/snacks";
 import { voteService } from "@/lib/mock/services/voteService";
 import { snackRequestService, SubmitSnackRequestInput } from "@/lib/mock/services/snackRequestService";
 import { adminService, AddPurchasedToInventoryInput } from "@/lib/mock/services/adminService";
@@ -38,14 +44,34 @@ export function useSnack(id: string) {
 export function useSnackOfTheWeek() {
   return useQuery({
     queryKey: ["snackOfTheWeek"],
-    queryFn: () => snackService.getSnackOfTheWeek(),
+    queryFn: async () => {
+      const featured = await snackService.getSnackOfTheWeek();
+      if (!featured) {
+        return null;
+      }
+
+      const snack = await fetchSnack(featured.id);
+      return snack ? { ...snack, voteCount: featured.voteCount } : null;
+    },
   });
 }
 
 export function useNewArrivals() {
   return useQuery({
     queryKey: ["newArrivals"],
-    queryFn: () => snackService.getNewArrivals(),
+    queryFn: async () => {
+      const [arrivals, mockSnacks] = await Promise.all([
+        fetchSnacks({ newArrivals: true, sortBy: "newest" }),
+        snackService.getSnacks(),
+      ]);
+      const voteCounts = new Map(
+        mockSnacks.map((snack) => [snack.id, snack.voteCount])
+      );
+      return arrivals.map((snack) => ({
+        ...snack,
+        voteCount: voteCounts.get(snack.id) ?? snack.voteCount,
+      }));
+    },
   });
 }
 
@@ -53,13 +79,8 @@ export function useConsumeSnack() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      snackId,
-      user,
-    }: {
-      snackId: string;
-      user: { id: string; name: string; role: "admin" | "member" };
-    }) => snackService.consumeSnack(snackId, user),
+    mutationFn: ({ snackId }: { snackId: string }) =>
+      consumeSnackApi(snackId),
     onMutate: async ({ snackId }) => {
       await Promise.all([
         queryClient.cancelQueries({ queryKey: ["snacks"] }),
@@ -129,13 +150,11 @@ export function useRestockSnack() {
       snackId,
       quantity,
       note,
-      user,
     }: {
       snackId: string;
       quantity: number;
       note?: string;
-      user?: { id: string; name: string; role: "admin" | "member" };
-    }) => snackService.restockSnack(snackId, quantity, note, user),
+    }) => restockSnackApi(snackId, { quantity, note }),
     onSuccess: (updatedSnack) => {
       queryClient.invalidateQueries({ queryKey: ["snacks"] });
       queryClient.invalidateQueries({ queryKey: ["snack", updatedSnack.id] });

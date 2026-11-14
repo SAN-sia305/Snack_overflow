@@ -209,7 +209,7 @@ export default function ExplorePage() {
     if (!user) return;
     setConsumingId(snack.id);
     try {
-      await consumeMutation.mutateAsync({ snackId: snack.id, user });
+      await consumeMutation.mutateAsync({ snackId: snack.id });
       addToast({ type: "success", title: "Consumed!", message: `Enjoyed ${snack.name}! Quantity updated.` });
       // Update modal snack if open
       if (selectedSnack?.id === snack.id) {

@@ -53,12 +53,25 @@ export const updateSnackSchema = z
     message: "At least one field must be provided.",
   });
 
+export const restockSnackSchema = z
+  .object({
+    quantity: z.number().int().min(1).max(2_147_483_647),
+    note: z.string().trim().max(200).optional(),
+  })
+  .strict();
+
 export const snackListQuerySchema = z
   .object({
     search: z.string().trim().max(100).optional(),
     category: snackCategorySchema.or(z.literal("all")).default("all"),
     status: snackStatusSchema.or(z.literal("all")).default("all"),
     sortBy: snackSortSchema.default("newest"),
+    newArrivals: z
+      .enum(["true", "false"])
+      .optional()
+      .transform((value) =>
+        value === undefined ? undefined : value === "true"
+      ),
     page: z.coerce.number().int().min(1).max(1_000_000).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(24),
   })
@@ -97,3 +110,4 @@ export type SnackListQuery = z.infer<typeof snackListQuerySchema>;
 export type SnackDto = z.infer<typeof snackDtoSchema>;
 export type CreateSnackPayload = z.infer<typeof createSnackSchema>;
 export type UpdateSnackPayload = z.infer<typeof updateSnackSchema>;
+export type RestockSnackPayload = z.infer<typeof restockSnackSchema>;

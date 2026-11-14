@@ -5,12 +5,15 @@ import {
   SnackListQuery,
   UpdateSnackPayload,
 } from "@/lib/api/snack-contracts";
+import type { RestockSnackPayload } from "@/lib/api/snack-contracts";
 import {
+  consumeSnack as consumeSnackRecord,
   createSnack as createSnackRecord,
   deleteSnack as deleteSnackRecord,
   findRequestGroupLinkedToSnack,
   findSnackById,
   findSnacks,
+  restockSnack as restockSnackRecord,
   SnackRecord,
   updateSnack as updateSnackRecord,
 } from "@/lib/server/repositories/snacks";
@@ -138,4 +141,48 @@ export async function deleteSnack(id: string): Promise<void> {
   }
 
   await deleteSnackRecord(id);
+}
+
+export async function consumeSnack(
+  id: string,
+  actorUserId: string
+): Promise<SnackDto> {
+  const result = await consumeSnackRecord(id, actorUserId);
+  if (result.kind === "not_found") {
+    throw new ApiError("NOT_FOUND", "Snack was not found.", 404);
+  }
+  if (result.kind === "out_of_stock") {
+    throw new ApiError(
+      "STOCK_CONFLICT",
+      "Someone beat you to the last packet. Better luck next time.",
+      409
+    );
+  }
+
+  return toSnackDto(result.snack);
+}
+
+export async function restockSnack(
+  id: string,
+  input: RestockSnackPayload,
+  actorUserId: string
+): Promise<SnackDto> {
+  const result = await restockSnackRecord(
+    id,
+    input.quantity,
+    input.note,
+    actorUserId
+  );
+  if (result.kind === "not_found") {
+    throw new ApiError("NOT_FOUND", "Snack was not found.", 404);
+  }
+  if (result.kind === "quantity_limit") {
+    throw new ApiError(
+      "QUANTITY_LIMIT_EXCEEDED",
+      "The requested restock would exceed the maximum stock quantity.",
+      409
+    );
+  }
+
+  return toSnackDto(result.snack);
 }

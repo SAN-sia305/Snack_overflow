@@ -23,7 +23,6 @@ import { getStockStatus } from "@/lib/mock/store";
 import { CreateSnackInput } from "@/lib/mock/services/snackService";
 import { UpdateSnackInput } from "@/lib/api/snacks";
 import { Snack, SnackCategory, SnackStatus } from "@/types";
-import { useCurrentUser } from "@/store/useAuthStore";
 import { toast } from "@/store/useToastStore";
 import {
   ArrowClockwise,
@@ -51,7 +50,7 @@ const snackSchema = z.object({
 type SnackFormData = z.infer<typeof snackSchema>;
 
 const restockSchema = z.object({
-  quantity: z.number().int("Enter a whole number").positive("Enter at least 1 packet"),
+  quantity: z.number().int("Enter a whole number").positive("Enter at least 1 packet").max(2_147_483_647, "Quantity is too high"),
   note: z.string().max(200, "Note must be under 200 characters").optional(),
 });
 
@@ -252,7 +251,6 @@ function RestockDialog({
   snack: Snack | null;
   onOpenChange: (snack: Snack | null) => void;
 }) {
-  const currentUser = useCurrentUser();
   const mutation = useRestockSnack();
   const {
     register,
@@ -277,11 +275,6 @@ function RestockDialog({
         snackId: snack.id,
         quantity: data.quantity,
         note: data.note?.trim() || undefined,
-        user: {
-          id: currentUser.id,
-          name: currentUser.name,
-          role: currentUser.role,
-        },
       });
       toast.success(
         "Stock updated",

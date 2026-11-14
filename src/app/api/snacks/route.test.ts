@@ -164,6 +164,30 @@ describe("snack read API", () => {
     );
   });
 
+  it("filters new arrivals and search terms together", async () => {
+    mocks.findMany.mockResolvedValue([]);
+    mocks.count.mockResolvedValue(0);
+
+    const response = await GET(
+      request("/api/snacks?newArrivals=true&search=coffee")
+    );
+
+    expect(response.status).toBe(200);
+    const where = mocks.findMany.mock.calls[0][0].where;
+    expect(where.AND).toHaveLength(2);
+    expect(where.AND[0].OR).toEqual([
+      { name: { contains: "coffee", mode: "insensitive" } },
+      { description: { contains: "coffee", mode: "insensitive" } },
+    ]);
+    expect(where.AND[1].OR).toEqual([
+      { arrivalUntil: { gte: expect.any(Date) } },
+      {
+        arrivalUntil: null,
+        createdAt: { gte: expect.any(Date) },
+      },
+    ]);
+  });
+
   it("returns a safe snack detail DTO or a standard not-found response", async () => {
     mocks.findSnack.mockResolvedValue(snack);
     const response = await getSnack(request("/api/snacks/snack_1"), {

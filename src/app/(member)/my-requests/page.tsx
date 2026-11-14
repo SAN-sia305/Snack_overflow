@@ -263,14 +263,7 @@ export default function MyRequestsPage() {
 
   const handleConsume = async (snack: Snack) => {
     try {
-      await consumeMutation.mutateAsync({
-        snackId: snack.id,
-        user: {
-          id: currentUser.id,
-          name: currentUser.name,
-          role: currentUser.role,
-        },
-      });
+      await consumeMutation.mutateAsync({ snackId: snack.id });
       addToast({
         type: "success",
         title: "Consumed!",

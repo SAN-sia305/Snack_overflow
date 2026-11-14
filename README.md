@@ -46,11 +46,15 @@ Sessions use random opaque tokens in HttpOnly cookies; only SHA-256 token hashes
 
 `GET /api/snacks` and `GET /api/snacks/:id` require an authenticated session. List responses have the shape `{ items, pagination: { page, limit, total, totalPages } }`; detail responses have the shape `{ snack }`. Snack DTOs contain the public pantry fields and a vote count, never ORM records.
 
-The list accepts `search` (name or description, up to 100 characters), `category` (`sweet`, `savoury`, `drink`, `healthy-ish`, or `all`), `status` (`stocked`, `running_low`, `gone`, or `all`), `sortBy` (`name-asc`, `name-desc`, `votes-desc`, `quantity-asc`, `quantity-desc`, or `newest`), `page` (default `1`), and `limit` (default `24`, maximum `100`). Invalid or unknown parameters return `400` with the standard `{ error: { code, message } }` envelope. Sorting uses stable ID tie-breakers. Stock status is derived as `gone` when quantity is zero, `running_low` when quantity is positive and at or below its threshold, otherwise `stocked`.
+The list accepts `search` (name or description, up to 100 characters), `category` (`sweet`, `savoury`, `drink`, `healthy-ish`, or `all`), `status` (`stocked`, `running_low`, `gone`, or `all`), `sortBy` (`name-asc`, `name-desc`, `votes-desc`, `quantity-asc`, `quantity-desc`, or `newest`), `newArrivals=true` (active arrival date or created within seven days), `page` (default `1`), and `limit` (default `24`, maximum `100`). Invalid or unknown parameters return `400` with the standard `{ error: { code, message } }` envelope. Sorting uses stable ID tie-breakers. Stock status is derived as `gone` when quantity is zero, `running_low` when quantity is positive and at or below its threshold, otherwise `stocked`.
 
 ## Admin snack CRUD API
 
 `POST /api/snacks`, `PATCH /api/snacks/:id`, and `DELETE /api/snacks/:id` require an authenticated Admin session and a trusted `Origin` matching `APP_ORIGIN`. Create accepts the editable inventory fields (`name`, `category`, `description`, `imageUrl`, `quantity`, `lowStockThreshold`, and optional `priceInr`). Updates accept a non-empty subset; set `priceInr` to `null` to clear it, while omitting that field leaves the current price unchanged. Snack names are trimmed and whitespace-normalized for uniqueness. Creating a snack with initial stock records its RESTOCKED activity in the same database transaction. A snack linked to an available request cannot be deleted.
+
+## Snack stock API
+
+`POST /api/snacks/:id/consume` requires an authenticated user and atomically decrements one packet only when stock is available; a last-packet race returns `409 STOCK_CONFLICT`. `POST /api/snacks/:id/restock` requires an Admin session and accepts a positive integer `quantity` plus an optional `note`. Each successful stock change and its activity record are committed in one database transaction. Both endpoints require a trusted `Origin`; actor identity is always taken from the server session.
 
 ## Architecture
 

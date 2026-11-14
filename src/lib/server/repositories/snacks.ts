@@ -17,12 +17,32 @@ export function buildSnackWhere(
   query: SnackListQuery
 ): Prisma.SnackWhereInput {
   const where: Prisma.SnackWhereInput = {};
+  const conditions: Prisma.SnackWhereInput[] = [];
 
   if (query.search) {
-    where.OR = [
-      { name: { contains: query.search, mode: "insensitive" } },
-      { description: { contains: query.search, mode: "insensitive" } },
-    ];
+    conditions.push({
+      OR: [
+        { name: { contains: query.search, mode: "insensitive" } },
+        { description: { contains: query.search, mode: "insensitive" } },
+      ],
+    });
+  }
+
+  if (query.newArrivals) {
+    const now = new Date();
+    const recentCutoff = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    conditions.push({
+      OR: [
+        { arrivalUntil: { gte: now } },
+        { arrivalUntil: null, createdAt: { gte: recentCutoff } },
+      ],
+    });
+  }
+
+  if (conditions.length === 1) {
+    Object.assign(where, conditions[0]);
+  } else if (conditions.length > 1) {
+    where.AND = conditions;
   }
 
   if (query.category !== "all") {
@@ -73,6 +93,16 @@ const snackWithVoteCount = {
 export type SnackRecord = Prisma.SnackGetPayload<{
   include: typeof snackWithVoteCount;
 }>;
+
+export type ConsumeSnackResult =
+  | { kind: "updated"; snack: SnackRecord }
+  | { kind: "not_found" }
+  | { kind: "out_of_stock" };
+
+export type RestockSnackResult =
+  | { kind: "updated"; snack: SnackRecord }
+  | { kind: "not_found" }
+  | { kind: "quantity_limit" };
 
 export async function findSnacks(
   query: SnackListQuery
@@ -146,4 +176,90 @@ export function findRequestGroupLinkedToSnack(id: string) {
 
 export async function deleteSnack(id: string): Promise<void> {
   await prisma.snack.delete({ where: { id } });
+}
+
+export async function consumeSnack(
+  id: string,
+  actorUserId: string
+): Promise<ConsumeSnackResult> {
+  return prisma.$transaction(async (transaction) => {
+    const updated = await transaction.snack.updateMany({
+      where: { id, quantity: { gt: 0 } },
+      data: { quantity: { decrement: 1 } },
+    });
+
+    if (updated.count === 0) {
+      const existing = await transaction.snack.findUnique({
+        where: { id },
+        select: { id: true },
+      });
+      return existing ? { kind: "out_of_stock" } : { kind: "not_found" };
+    }
+
+    const snack = await transaction.snack.findUnique({
+      where: { id },
+      include: snackWithVoteCount,
+    });
+    if (!snack) {
+      throw new Error("Snack disappeared during the consume transaction.");
+    }
+
+    await transaction.activity.create({
+      data: {
+        actor: { connect: { id: actorUserId } },
+        action: "CONSUMED",
+        snack: { connect: { id } },
+        snackName: snack.name,
+        amount: 1,
+      },
+    });
+
+    return { kind: "updated", snack };
+  });
+}
+
+export async function restockSnack(
+  id: string,
+  quantity: number,
+  note: string | undefined,
+  actorUserId: string
+): Promise<RestockSnackResult> {
+  return prisma.$transaction(async (transaction) => {
+    const updated = await transaction.snack.updateMany({
+      where: {
+        id,
+        quantity: { lte: 2_147_483_647 - quantity },
+      },
+      data: { quantity: { increment: quantity } },
+    });
+
+    if (updated.count === 0) {
+      const existing = await transaction.snack.findUnique({
+        where: { id },
+        select: { id: true },
+      });
+      return existing ? { kind: "quantity_limit" } : { kind: "not_found" };
+    }
+
+    const snack = await transaction.snack.findUnique({
+      where: { id },
+      include: snackWithVoteCount,
+    });
+    if (!snack) {
+      throw new Error("Snack disappeared during the restock transaction.");
+    }
+
+    await transaction.activity.create({
+      data: {
+        actor: { connect: { id: actorUserId } },
+        action: "RESTOCKED",
+        snack: { connect: { id } },
+        snackName: snack.name,
+        amount: quantity,
+        note: note?.trim() || null,
+      },
+    });
+
+    return { kind: "updated", snack };
+  });
 }

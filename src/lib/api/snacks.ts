@@ -2,6 +2,7 @@ import {
   snackDetailResponseSchema,
   snackListResponseSchema,
 } from "@/lib/api/snack-contracts";
+import type { RestockSnackPayload } from "@/lib/api/snack-contracts";
 import {
   ApiClientError,
   requestJson,
@@ -30,6 +31,7 @@ export async function fetchSnacks(
     status:
       params.status && params.status !== "all" ? params.status : undefined,
     sortBy: params.sortBy,
+    newArrivals: params.newArrivals ? "true" : undefined,
     page: params.page?.toString(),
     limit: (params.limit ?? 100).toString(),
   };
@@ -86,4 +88,27 @@ export async function deleteSnack(id: string): Promise<void> {
   await requestVoid(`/api/snacks/${encodeURIComponent(id)}`, {
     method: "DELETE",
   });
+}
+
+export async function consumeSnack(id: string) {
+  const response = await requestJson(
+    `/api/snacks/${encodeURIComponent(id)}/consume`,
+    { method: "POST" }
+  );
+  return snackDetailResponseSchema.parse(response).snack;
+}
+
+export async function restockSnack(
+  id: string,
+  input: RestockSnackPayload
+) {
+  const response = await requestJson(
+    `/api/snacks/${encodeURIComponent(id)}/restock`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }
+  );
+  return snackDetailResponseSchema.parse(response).snack;
 }

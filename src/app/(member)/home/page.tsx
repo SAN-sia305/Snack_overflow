@@ -74,10 +74,7 @@ export default function MemberHomePage() {
 
   const handleConsume = async (snack: Snack) => {
     try {
-      await consumeMutation.mutateAsync({
-        snackId: snack.id,
-        user: { id: currentUser.id, name: currentUser.name, role: currentUser.role },
-      });
+      await consumeMutation.mutateAsync({ snackId: snack.id });
       toast.success(
         "Enjoy your snack!",
         `Consumed 1 packet of ${snack.name}. Pantry stock updated.`
