@@ -1,0 +1,169 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pg_trgm]
+}
+
+enum UserRole {
+  ADMIN
+  MEMBER
+}
+
+enum SnackCategory {
+  SWEET
+  SAVOURY
+  DRINK
+  HEALTHY_ISH
+}
+
+enum ProductRequestStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  PURCHASED
+  AVAILABLE
+}
+
+enum ActivityAction {
+  CONSUMED
+  RESTOCKED
+  REQUEST_APPROVED
+  REQUEST_REJECTED
+  REQUEST_PURCHASED
+  REQUEST_AVAILABLE
+}
+
+model User {
+  id              String                @id @default(cuid())
+  name            String
+  email           String                @unique
+  passwordHash    String
+  role            UserRole
+  isVerified      Boolean               @default(false)
+  department      String?
+  avatarUrl       String?
+  createdAt       DateTime              @default(now())
+  updatedAt       DateTime              @updatedAt
+  sessions        Session[]
+  votes           Vote[]
+  snackRequests   MemberSnackRequest[]  @relation("RequestMember")
+  reviewedGroups  ProductRequestGroup[] @relation("RequestReviewer")
+  activities      Activity[]            @relation("ActivityActor")
+
+  @@index([role, isVerified])
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+model Snack {
+  id               String                @id @default(cuid())
+  name             String
+  normalizedName   String                @unique
+  category         SnackCategory
+  description      String                @default("")
+  imageUrl         String                @default("")
+  quantity         Int                   @default(0)
+  lowStockThreshold Int                  @default(5)
+  priceInr         Decimal?              @db.Decimal(10, 2)
+  arrivalUntil     DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+  votes            Vote[]
+  requestGroup     ProductRequestGroup?  @relation("AvailableSnack")
+  activities       Activity[]
+
+  @@index([category, quantity])
+  @@index([createdAt, id])
+  @@index([name(ops: raw("gin_trgm_ops"))], type: Gin)
+  @@index([description(ops: raw("gin_trgm_ops"))], type: Gin)
+  @@map("snacks")
+}
+
+model Vote {
+  id        String   @id @default(cuid())
+  userId    String
+  snackId   String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  snack     Snack    @relation(fields: [snackId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, snackId])
+  @@index([snackId])
+  @@map("votes")
+}
+
+model ProductRequestGroup {
+  id                  String                @id @default(cuid())
+  normalizedName      String                @unique
+  productName         String
+  status              ProductRequestStatus  @default(REQUESTED)
+  reviewedById        String?
+  reviewedAt          DateTime?
+  decisionNote        String?
+  purchasedAt         DateTime?
+  availableAt         DateTime?
+  actualQuantityAdded Int?
+  linkedSnackId       String?               @unique
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  reviewedBy          User?                 @relation("RequestReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  linkedSnack         Snack?                @relation("AvailableSnack", fields: [linkedSnackId], references: [id], onDelete: SetNull)
+  requests            MemberSnackRequest[]
+  activities          Activity[]
+
+  @@index([status, updatedAt, id])
+  @@map("product_request_groups")
+}
+
+model MemberSnackRequest {
+  id                 String               @id @default(cuid())
+  groupId            String
+  userId             String
+  expectedPriceInr   Decimal?             @db.Decimal(10, 2)
+  note               String?
+  createdAt          DateTime             @default(now())
+  group              ProductRequestGroup  @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user               User                 @relation("RequestMember", fields: [userId], references: [id], onDelete: Restrict)
+
+  @@unique([groupId, userId])
+  @@index([userId, createdAt, id])
+  @@index([groupId, createdAt, userId])
+  @@map("member_snack_requests")
+}
+
+model Activity {
+  id          String                @id @default(cuid())
+  actorUserId String
+  action      ActivityAction
+  snackId     String?
+  groupId     String?
+  snackName   String
+  amount      Int?
+  note        String?
+  createdAt   DateTime              @default(now())
+  actor       User                  @relation("ActivityActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  snack       Snack?                @relation(fields: [snackId], references: [id], onDelete: SetNull)
+  group       ProductRequestGroup?  @relation(fields: [groupId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt, id])
+  @@index([action, createdAt, id])
+  @@index([snackId, createdAt, id])
+  @@map("activities")
+}
