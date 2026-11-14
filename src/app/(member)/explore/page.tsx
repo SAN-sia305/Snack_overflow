@@ -19,7 +19,7 @@ import {
 import { useCurrentUser } from "@/store/useAuthStore";
 import { useToastStore } from "@/store/useToastStore";
 import { Snack, SnackCategory, SnackStatus } from "@/types";
-import { GetSnacksParams } from "@/lib/mock/services/snackService";
+import type { GetSnacksParams } from "@/lib/api/snacks";
 import {
   MagnifyingGlass,
   Compass,

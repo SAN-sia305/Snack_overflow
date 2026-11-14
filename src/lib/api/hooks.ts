@@ -4,7 +4,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type {
   CreateSnackInput,
   GetSnacksParams,
-} from "@/lib/mock/services/snackService";
+  UpdateSnackInput,
+} from "@/lib/api/snacks";
 import {
   consumeSnack as consumeSnackApi,
   createSnack as createSnackApi,
@@ -14,18 +15,27 @@ import {
   restockSnack as restockSnackApi,
   updateSnack as updateSnackApi,
 } from "@/lib/api/snacks";
-import type { UpdateSnackInput } from "@/lib/api/snacks";
 import {
   fetchUserVotes,
   toggleVote as toggleVoteApi,
 } from "@/lib/api/votes";
 import {
+  fetchAdminProductRequests as fetchAdminProductRequestsApi,
   fetchMyRequests as fetchMyRequestsApi,
   submitSnackRequest as submitSnackRequestApi,
+  updateProductRequestStatus as updateProductRequestStatusApi,
+  addPurchasedToInventory as addPurchasedToInventoryApi,
 } from "@/lib/api/requests";
-import type { SubmitSnackRequestInput } from "@/lib/api/request-contracts";
-import { adminService, AddPurchasedToInventoryInput } from "@/lib/mock/services/adminService";
-import { activityService, GetActivitiesParams } from "@/lib/mock/services/activityService";
+import type {
+  AddPurchasedToInventoryPayload,
+  SubmitSnackRequestInput,
+} from "@/lib/api/request-contracts";
+import {
+  fetchAdminAlerts as fetchAdminAlertsApi,
+  fetchAdminSummary as fetchAdminSummaryApi,
+  fetchAdminActivities as fetchAdminActivitiesApi,
+  type GetActivitiesParams,
+} from "@/lib/api/admin";
 import { ProductRequestStatus, Snack } from "@/types";
 
 // ========================
@@ -352,21 +362,21 @@ export function useSubmitSnackRequest() {
 export function useAdminSummary() {
   return useQuery({
     queryKey: ["admin", "summary"],
-    queryFn: () => adminService.getAdminSummary(),
+    queryFn: fetchAdminSummaryApi,
   });
 }
 
 export function useAdminAlerts() {
   return useQuery({
     queryKey: ["admin", "alerts"],
-    queryFn: () => adminService.getAdminAlerts(),
+    queryFn: fetchAdminAlertsApi,
   });
 }
 
 export function useProductRequests(statusFilter?: ProductRequestStatus | "all") {
   return useQuery({
     queryKey: ["admin", "requests", statusFilter],
-    queryFn: () => adminService.getProductRequests(statusFilter),
+    queryFn: () => fetchAdminProductRequestsApi(statusFilter),
   });
 }
 
@@ -380,14 +390,15 @@ export function useUpdateProductRequestStatus() {
       decisionNote,
     }: {
       id: string;
-      status: ProductRequestStatus;
+      status: "approved" | "rejected" | "purchased";
       decisionNote?: string;
-    }) => adminService.updateProductRequestStatus(id, status, decisionNote),
+    }) => updateProductRequestStatusApi(id, { status, decisionNote }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "requests"] });
       queryClient.invalidateQueries({ queryKey: ["myRequests"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "summary"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "alerts"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "activities"] });
     },
   });
 }
@@ -401,8 +412,8 @@ export function useAddPurchasedToInventory() {
       snackData,
     }: {
       productRequestId: string;
-      snackData: AddPurchasedToInventoryInput;
-    }) => adminService.addPurchasedToInventory(productRequestId, snackData),
+      snackData: AddPurchasedToInventoryPayload;
+    }) => addPurchasedToInventoryApi(productRequestId, snackData),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin", "requests"] });
       queryClient.invalidateQueries({ queryKey: ["myRequests"] });
@@ -418,6 +429,6 @@ export function useAddPurchasedToInventory() {
 export function useAdminActivities(params: GetActivitiesParams = {}) {
   return useQuery({
     queryKey: ["admin", "activities", params],
-    queryFn: () => activityService.getActivities(params),
+    queryFn: () => fetchAdminActivitiesApi(params),
   });
 }

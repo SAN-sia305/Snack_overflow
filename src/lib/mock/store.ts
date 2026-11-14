@@ -1,4 +1,4 @@
-import { Snack, SnackProductRequest, Activity, SnackStatus } from "@/types";
+import { Snack, SnackProductRequest, Activity } from "@/types";
 import { SEED_SNACKS } from "./data/snacks";
 import { SEED_REQUESTS } from "./data/requests";
 import { SEED_ACTIVITIES } from "./data/activities";
@@ -57,17 +57,7 @@ function persistStore() {
   }
 }
 
-/**
- * Derived stock status calculation helper
- * - gone: quantity === 0
- * - running_low: quantity > 0 && quantity <= lowStockThreshold
- * - stocked: quantity > lowStockThreshold
- */
-export function getStockStatus(quantity: number, lowStockThreshold: number): SnackStatus {
-  if (quantity <= 0) return "gone";
-  if (quantity <= lowStockThreshold) return "running_low";
-  return "stocked";
-}
+export { getStockStatus } from "@/lib/domain/stock";
 
 /**
  * Normalize product names for deduplication

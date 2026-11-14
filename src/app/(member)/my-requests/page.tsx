@@ -18,7 +18,7 @@ import {
 } from "@/lib/api/hooks";
 import { useCurrentUser } from "@/store/useAuthStore";
 import { useToastStore } from "@/store/useToastStore";
-import { MyRequestItem } from "@/lib/mock/services/snackRequestService";
+import type { MyRequestItem } from "@/lib/api/request-contracts";
 import { ProductRequestStatus, Snack } from "@/types";
 import {
   ArrowRight,

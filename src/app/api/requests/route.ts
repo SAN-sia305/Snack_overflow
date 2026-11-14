@@ -1,11 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 import { submitSnackRequestSchema } from "@/lib/api/request-contracts";
-import { requireMember } from "@/lib/server/auth";
+import { requireAdmin, requireMember } from "@/lib/server/auth";
 import { hasTrustedOrigin } from "@/lib/server/csrf";
 import { apiError, apiErrorResponse } from "@/lib/server/api-response";
-import { submitMyRequest } from "@/lib/server/services/requests";
+import {
+  listAdminProductRequests,
+  submitMyRequest,
+} from "@/lib/server/services/requests";
 
 export const runtime = "nodejs";
+
+export async function GET(request: NextRequest) {
+  try {
+    await requireAdmin(request);
+    const searchParams = request.nextUrl.searchParams;
+    const status = searchParams.get("status") ?? undefined;
+
+    const requests = await listAdminProductRequests(status);
+    return NextResponse.json(
+      { requests },
+      {
+        headers: { "Cache-Control": "private, no-store" },
+      }
+    );
+  } catch (error) {
+    return apiErrorResponse(error);
+  }
+}
 
 export async function POST(request: NextRequest) {
   if (!hasTrustedOrigin(request)) {

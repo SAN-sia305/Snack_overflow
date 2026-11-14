@@ -5,7 +5,7 @@ import { Snack } from "@/types";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { getStockStatus } from "@/lib/mock/store";
+import { getStockStatus } from "@/lib/domain/stock";
 import { ThumbsUp, Sparkle, WarningCircle, PlusCircle } from "@phosphor-icons/react";
 
 export function SnackDetailModal({

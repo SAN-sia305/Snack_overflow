@@ -19,8 +19,8 @@ import {
   useSnacks,
   useUpdateSnack,
 } from "@/lib/api/hooks";
-import { getStockStatus } from "@/lib/mock/store";
-import { CreateSnackInput } from "@/lib/mock/services/snackService";
+import { getStockStatus } from "@/lib/domain/stock";
+import type { CreateSnackPayload as CreateSnackInput } from "@/lib/api/snack-contracts";
 import { UpdateSnackInput } from "@/lib/api/snacks";
 import { Snack, SnackCategory, SnackStatus } from "@/types";
 import { toast } from "@/store/useToastStore";
@@ -119,23 +119,23 @@ function SnackFormDialog({
     reset(
       snack
         ? {
-            name: snack.name,
-            category: snack.category,
-            description: snack.description,
-            quantity: snack.quantity,
-            lowStockThreshold: snack.lowStockThreshold,
-            imageUrl: snack.imageUrl,
-            priceInr: snack.priceInr ?? Number.NaN,
-          }
+          name: snack.name,
+          category: snack.category,
+          description: snack.description,
+          quantity: snack.quantity,
+          lowStockThreshold: snack.lowStockThreshold,
+          imageUrl: snack.imageUrl,
+          priceInr: snack.priceInr ?? Number.NaN,
+        }
         : {
-            name: "",
-            category: "sweet",
-            description: "",
-            quantity: 0,
-            lowStockThreshold: 5,
-            imageUrl: "https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=600&auto=format&fit=crop&q=80",
-            priceInr: Number.NaN,
-          }
+          name: "",
+          category: "sweet",
+          description: "",
+          quantity: 0,
+          lowStockThreshold: 5,
+          imageUrl: "https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=600&auto=format&fit=crop&q=80",
+          priceInr: Number.NaN,
+        }
     );
   }, [open, snack, reset]);
 

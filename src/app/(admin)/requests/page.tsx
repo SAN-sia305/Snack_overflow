@@ -25,7 +25,7 @@ import {
   useUpdateProductRequestStatus,
 } from "@/lib/api/hooks";
 import { SnackProductRequest, ProductRequestStatus, SnackCategory } from "@/types";
-import { AddPurchasedToInventoryInput } from "@/lib/mock/services/adminService";
+import type { AddPurchasedToInventoryPayload as AddPurchasedToInventoryInput } from "@/lib/api/request-contracts";
 import { toast } from "@/store/useToastStore";
 import {
   Check,

@@ -24,7 +24,7 @@ import { SnackDetailModal } from "@/features/snacks/components/SnackDetailModal"
 import { RequestSnackModal } from "@/features/requests/components/RequestSnackModal";
 import { Snack, SnackCategory } from "@/types";
 import { toast } from "@/store/useToastStore";
-import { getStockStatus } from "@/lib/mock/store";
+import { getStockStatus } from "@/lib/domain/stock";
 import {
   Sparkle,
   Compass,

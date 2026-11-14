@@ -1,4 +1,7 @@
 import {
+  CreateSnackPayload,
+  SnackListQuery,
+  UpdateSnackPayload,
   snackDetailResponseSchema,
   snackListResponseSchema,
 } from "@/lib/api/snack-contracts";
@@ -8,18 +11,13 @@ import {
   requestJson,
   requestVoid,
 } from "@/lib/api/client";
-import type {
-  CreateSnackInput,
-  GetSnacksParams,
-} from "@/lib/mock/services/snackService";
 
-export type UpdateSnackInput =
-  Partial<Omit<CreateSnackInput, "priceInr">> & {
-    priceInr?: number | null;
-  };
+export type CreateSnackInput = CreateSnackPayload;
+export type GetSnacksParams = Partial<SnackListQuery>;
+export type UpdateSnackInput = UpdateSnackPayload;
 
 export async function fetchSnacks(
-  params: GetSnacksParams = {}
+  params: Partial<GetSnacksParams> = {}
 ) {
   const query = new URLSearchParams();
   const values: Record<string, string | undefined> = {
