@@ -98,3 +98,52 @@ export function findSnackById(id: string) {
     include: snackWithVoteCount,
   });
 }
+
+export async function createSnack(
+  data: Prisma.SnackCreateInput,
+  actorUserId: string
+): Promise<SnackRecord> {
+  return prisma.$transaction(async (transaction) => {
+    const snack = await transaction.snack.create({
+      data,
+      include: snackWithVoteCount,
+    });
+
+    if (snack.quantity > 0) {
+      await transaction.activity.create({
+        data: {
+          actor: { connect: { id: actorUserId } },
+          action: "RESTOCKED",
+          snack: { connect: { id: snack.id } },
+          snackName: snack.name,
+          amount: snack.quantity,
+          note: "Initial pantry inventory creation.",
+        },
+      });
+    }
+
+    return snack;
+  });
+}
+
+export function updateSnack(
+  id: string,
+  data: Prisma.SnackUpdateInput
+): Promise<SnackRecord> {
+  return prisma.snack.update({
+    where: { id },
+    data,
+    include: snackWithVoteCount,
+  });
+}
+
+export function findRequestGroupLinkedToSnack(id: string) {
+  return prisma.productRequestGroup.findUnique({
+    where: { linkedSnackId: id },
+    select: { id: true },
+  });
+}
+
+export async function deleteSnack(id: string): Promise<void> {
+  await prisma.snack.delete({ where: { id } });
+}

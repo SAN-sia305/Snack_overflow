@@ -18,6 +18,41 @@ export const snackSortSchema = z.enum([
   "newest",
 ]);
 
+const priceInrSchema = z
+  .number()
+  .positive()
+  .max(99_999_999.99)
+  .refine((value) => Number(value.toFixed(2)) === value, {
+    message: "Price can have at most two decimal places.",
+  });
+
+const snackFields = {
+  name: z.string().trim().min(2).max(60),
+  category: snackCategorySchema,
+  description: z.string().trim().min(4).max(300),
+  quantity: z.number().int().min(0).max(2_147_483_647),
+  lowStockThreshold: z.number().int().min(0).max(2_147_483_647),
+  imageUrl: z.string().trim().url().max(2048),
+};
+
+export const createSnackSchema = z
+  .object({
+    ...snackFields,
+    priceInr: priceInrSchema.optional(),
+  })
+  .strict();
+
+export const updateSnackSchema = z
+  .object({
+    ...snackFields,
+    priceInr: priceInrSchema.nullable().optional(),
+  })
+  .partial()
+  .strict()
+  .refine((input) => Object.keys(input).length > 0, {
+    message: "At least one field must be provided.",
+  });
+
 export const snackListQuerySchema = z
   .object({
     search: z.string().trim().max(100).optional(),
@@ -60,3 +95,5 @@ export const snackDetailResponseSchema = z.object({
 
 export type SnackListQuery = z.infer<typeof snackListQuerySchema>;
 export type SnackDto = z.infer<typeof snackDtoSchema>;
+export type CreateSnackPayload = z.infer<typeof createSnackSchema>;
+export type UpdateSnackPayload = z.infer<typeof updateSnackSchema>;

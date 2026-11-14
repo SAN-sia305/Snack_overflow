@@ -49,6 +49,9 @@ export function apiErrorResponse(error: unknown): NextResponse {
     if (error.code === "P2025") {
       return apiError("NOT_FOUND", "The requested resource was not found.", 404);
     }
+    if (error.code === "P2004") {
+      return apiError("CONFLICT", "The requested change conflicts with existing data.", 409);
+    }
   }
 
   console.error("Unhandled API error.");

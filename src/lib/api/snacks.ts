@@ -2,8 +2,20 @@ import {
   snackDetailResponseSchema,
   snackListResponseSchema,
 } from "@/lib/api/snack-contracts";
-import { ApiClientError, requestJson } from "@/lib/api/client";
-import type { GetSnacksParams } from "@/lib/mock/services/snackService";
+import {
+  ApiClientError,
+  requestJson,
+  requestVoid,
+} from "@/lib/api/client";
+import type {
+  CreateSnackInput,
+  GetSnacksParams,
+} from "@/lib/mock/services/snackService";
+
+export type UpdateSnackInput =
+  Partial<Omit<CreateSnackInput, "priceInr">> & {
+    priceInr?: number | null;
+  };
 
 export async function fetchSnacks(
   params: GetSnacksParams = {}
@@ -44,4 +56,34 @@ export async function fetchSnack(id: string) {
     }
     throw error;
   }
+}
+
+export async function createSnack(input: CreateSnackInput) {
+  const response = await requestJson("/api/snacks", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
+  return snackDetailResponseSchema.parse(response).snack;
+}
+
+export async function updateSnack(
+  id: string,
+  updates: UpdateSnackInput
+) {
+  const response = await requestJson(
+    `/api/snacks/${encodeURIComponent(id)}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updates),
+    }
+  );
+  return snackDetailResponseSchema.parse(response).snack;
+}
+
+export async function deleteSnack(id: string): Promise<void> {
+  await requestVoid(`/api/snacks/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
 }

@@ -21,6 +21,7 @@ import {
 } from "@/lib/api/hooks";
 import { getStockStatus } from "@/lib/mock/store";
 import { CreateSnackInput } from "@/lib/mock/services/snackService";
+import { UpdateSnackInput } from "@/lib/api/snacks";
 import { Snack, SnackCategory, SnackStatus } from "@/types";
 import { useCurrentUser } from "@/store/useAuthStore";
 import { toast } from "@/store/useToastStore";
@@ -150,7 +151,11 @@ function SnackFormDialog({
 
     try {
       if (snack) {
-        await updateMutation.mutateAsync({ id: snack.id, updates: input });
+        const updates: UpdateSnackInput = {
+          ...input,
+          priceInr: input.priceInr ?? null,
+        };
+        await updateMutation.mutateAsync({ id: snack.id, updates });
         toast.success("Snack updated", `${data.name} has been updated.`);
       } else {
         await createMutation.mutateAsync(input);

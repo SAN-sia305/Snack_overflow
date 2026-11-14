@@ -18,6 +18,34 @@ export class ApiClientError extends Error {
   }
 }
 
+async function errorFromResponse(response: Response): Promise<ApiClientError> {
+  let payload: unknown;
+  try {
+    payload = await response.json();
+  } catch {
+    return new ApiClientError(
+      "The request failed.",
+      "REQUEST_FAILED",
+      response.status
+    );
+  }
+
+  const parsedError = apiErrorSchema.safeParse(payload);
+  if (!parsedError.success) {
+    return new ApiClientError(
+      "The request failed.",
+      "REQUEST_FAILED",
+      response.status
+    );
+  }
+
+  return new ApiClientError(
+    parsedError.data.error.message,
+    parsedError.data.error.code,
+    response.status
+  );
+}
+
 export async function requestJson(
   input: string,
   init?: RequestInit
@@ -28,35 +56,30 @@ export async function requestJson(
     ...init,
   });
 
+  if (!response.ok) {
+    throw await errorFromResponse(response);
+  }
+
   let payload: unknown;
   try {
     payload = await response.json();
   } catch {
-    if (!response.ok) {
-      throw new ApiClientError(
-        "The request failed.",
-        "REQUEST_FAILED",
-        response.status
-      );
-    }
     throw new Error("The server returned an invalid response.");
   }
 
-  if (!response.ok) {
-    const parsedError = apiErrorSchema.safeParse(payload);
-    if (parsedError.success) {
-      throw new ApiClientError(
-        parsedError.data.error.message,
-        parsedError.data.error.code,
-        response.status
-      );
-    }
-    throw new ApiClientError(
-      "The request failed.",
-      "REQUEST_FAILED",
-      response.status
-    );
-  }
-
   return payload;
+}
+
+export async function requestVoid(
+  input: string,
+  init?: RequestInit
+): Promise<void> {
+  const response = await fetch(input, {
+    credentials: "same-origin",
+    cache: "no-store",
+    ...init,
+  });
+  if (!response.ok) {
+    throw await errorFromResponse(response);
+  }
 }

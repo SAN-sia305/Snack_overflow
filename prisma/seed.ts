@@ -1,5 +1,6 @@
 import argon2 from "argon2";
 import { Prisma, PrismaClient } from "@prisma/client";
+import { normalizeName } from "../src/lib/domain/normalize";
 import { SEED_ACTIVITIES } from "../src/lib/mock/data/activities";
 import { SEED_REQUESTS } from "../src/lib/mock/data/requests";
 import { SEED_SNACKS } from "../src/lib/mock/data/snacks";
@@ -32,9 +33,7 @@ const activityActionMap = {
   restocked: "RESTOCKED",
 } as const;
 
-function normalize(value: string): string {
-  return value.trim().toLowerCase().replace(/\s+/g, " ");
-}
+
 
 async function seed(): Promise<void> {
   const adminPassword = process.env.SEED_ADMIN_PASSWORD;
@@ -81,7 +80,7 @@ async function seed(): Promise<void> {
       create: {
         id: snack.id,
         name: snack.name,
-        normalizedName: normalize(snack.name),
+        normalizedName: normalizeName(snack.name),
         category: categoryMap[snack.category],
         description: snack.description,
         imageUrl: snack.imageUrl,

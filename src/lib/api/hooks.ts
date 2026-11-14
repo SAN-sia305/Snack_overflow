@@ -2,7 +2,14 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { snackService, GetSnacksParams, CreateSnackInput } from "@/lib/mock/services/snackService";
-import { fetchSnack, fetchSnacks } from "@/lib/api/snacks";
+import {
+  createSnack as createSnackApi,
+  deleteSnack as deleteSnackApi,
+  fetchSnack,
+  fetchSnacks,
+  updateSnack as updateSnackApi,
+  UpdateSnackInput,
+} from "@/lib/api/snacks";
 import { voteService } from "@/lib/mock/services/voteService";
 import { snackRequestService, SubmitSnackRequestInput } from "@/lib/mock/services/snackRequestService";
 import { adminService, AddPurchasedToInventoryInput } from "@/lib/mock/services/adminService";
@@ -133,6 +140,7 @@ export function useRestockSnack() {
       queryClient.invalidateQueries({ queryKey: ["snacks"] });
       queryClient.invalidateQueries({ queryKey: ["snack", updatedSnack.id] });
       queryClient.invalidateQueries({ queryKey: ["newArrivals"] });
+      queryClient.invalidateQueries({ queryKey: ["snackOfTheWeek"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "summary"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "alerts"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "activities"] });
@@ -144,13 +152,12 @@ export function useCreateSnack() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: CreateSnackInput) => snackService.createSnack(input),
-    onSuccess: (_, id) => {
+    mutationFn: (input: CreateSnackInput) => createSnackApi(input),
+    onSuccess: (snack) => {
       queryClient.invalidateQueries({ queryKey: ["snacks"] });
-      queryClient.invalidateQueries({ queryKey: ["snack", id] });
+      queryClient.invalidateQueries({ queryKey: ["snack", snack.id] });
       queryClient.invalidateQueries({ queryKey: ["newArrivals"] });
       queryClient.invalidateQueries({ queryKey: ["snackOfTheWeek"] });
-      queryClient.invalidateQueries({ queryKey: ["userVotes"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "activities"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "summary"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "alerts"] });
@@ -167,8 +174,8 @@ export function useUpdateSnack() {
       updates,
     }: {
       id: string;
-      updates: Partial<CreateSnackInput>;
-    }) => snackService.updateSnack(id, updates),
+      updates: UpdateSnackInput;
+    }) => updateSnackApi(id, updates),
     onSuccess: (updatedSnack) => {
       queryClient.invalidateQueries({ queryKey: ["snacks"] });
       queryClient.invalidateQueries({ queryKey: ["snack", updatedSnack.id] });
@@ -183,9 +190,10 @@ export function useDeleteSnack() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => snackService.deleteSnack(id),
-    onSuccess: () => {
+    mutationFn: (id: string) => deleteSnackApi(id),
+    onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ["snacks"] });
+      queryClient.removeQueries({ queryKey: ["snack", id], exact: true });
       queryClient.invalidateQueries({ queryKey: ["newArrivals"] });
       queryClient.invalidateQueries({ queryKey: ["snackOfTheWeek"] });
       queryClient.invalidateQueries({ queryKey: ["admin", "activities"] });
